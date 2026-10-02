@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from assistant.memory_model import Memory
-from assistant.memory_resolution import (
+from assistant.memory.model import Memory
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory_resolver import (
+from assistant.memory.resolution.rules import (
     MemoryResolver,
 )
 

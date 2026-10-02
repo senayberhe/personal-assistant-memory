@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from assistant.memory_candidate import (
+from assistant.memory.retrieval.candidate import (
     MemoryCandidate,
 )
-from assistant.memory_model import Memory
+from assistant.memory.model import Memory
 
 
 def test_memory_candidate_stores_memory_and_scores():

@@ -3,7 +3,7 @@ import pytest
 from tests.fakes.memory_confirmation import FakeMemoryConfirmation
 
 from assistant.memory import MemoryManager
-from assistant.memory_store import MemoryStore
+from assistant.memory.storage.base import MemoryStore
 from assistant.memory import Memory
 
 

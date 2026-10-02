@@ -1,9 +1,9 @@
 import pytest
 
-from assistant.ai_memory_resolver import (
+from assistant.memory.resolution.ai import (
     AIMemoryResolver,
 )
-from assistant.memory_resolution import (
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
 

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from assistant.chroma_memory_store import ChromaMemoryStore
+from assistant.memory.storage.chroma import ChromaMemoryStore
 from assistant.memory import Memory
 from tests.fakes.memory_confirmation import FakeMemoryConfirmation
 
@@ -79,8 +79,8 @@ def test_memory_metadata_persists(tmp_path):
     assert retrieved.memory_type == memory.memory_type
 
 def test_store_and_retriever_share_embeddings(tmp_path):
-    from assistant.chroma_retriever import ChromaRetriever
-    from assistant.embeddings import SimpleEmbeddingService
+    from assistant.memory.retrieval.chroma import ChromaRetriever
+    from assistant.memory.embeddings import SimpleEmbeddingService
     from assistant.memory import MemoryManager
 
     embeddings = SimpleEmbeddingService()
@@ -115,7 +115,7 @@ def test_store_and_retriever_share_embeddings(tmp_path):
 def test_memory_key_and_expiry_persist(tmp_path):
     from datetime import timedelta
 
-    from assistant.embeddings import SimpleEmbeddingService
+    from assistant.memory.embeddings import SimpleEmbeddingService
 
     store = ChromaMemoryStore(
         persist_directory=tmp_path,
@@ -151,8 +151,8 @@ def test_memory_key_and_expiry_persist(tmp_path):
 
 
 def test_upsert_with_chroma_updates_in_place(tmp_path):
-    from assistant.chroma_retriever import ChromaRetriever
-    from assistant.embeddings import SimpleEmbeddingService
+    from assistant.memory.retrieval.chroma import ChromaRetriever
+    from assistant.memory.embeddings import SimpleEmbeddingService
     from assistant.memory import MemoryManager
 
     embeddings = SimpleEmbeddingService()
@@ -177,8 +177,8 @@ def test_upsert_with_chroma_updates_in_place(tmp_path):
 
 
 def test_expired_memories_are_not_recalled(tmp_path):
-    from assistant.chroma_retriever import ChromaRetriever
-    from assistant.embeddings import SimpleEmbeddingService
+    from assistant.memory.retrieval.chroma import ChromaRetriever
+    from assistant.memory.embeddings import SimpleEmbeddingService
     from assistant.memory import MemoryManager
 
     embeddings = SimpleEmbeddingService()
@@ -208,9 +208,9 @@ def test_expired_memories_are_not_recalled(tmp_path):
 
 
 def test_version_persists(tmp_path):
-    from assistant.chroma_retriever import ChromaRetriever
-    from assistant.embeddings import SimpleEmbeddingService
-    from assistant.in_memory_history_store import InMemoryHistoryStore
+    from assistant.memory.retrieval.chroma import ChromaRetriever
+    from assistant.memory.embeddings import SimpleEmbeddingService
+    from assistant.memory.history.in_memory import InMemoryHistoryStore
     from assistant.memory import MemoryManager
 
     embeddings = SimpleEmbeddingService()

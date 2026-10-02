@@ -1,4 +1,4 @@
-from assistant.metrics import Metrics
+from assistant.tools.metrics import Metrics
 
 def test_success_metric():
     metrics = Metrics()

@@ -1,40 +1,40 @@
 from assistant.agent import VoiceAgent
-from assistant.ai_memory_resolver import AIMemoryResolver
+from assistant.memory.resolution.ai import AIMemoryResolver
 from assistant.application import Application
-from assistant.assistant import VoiceAssistant
-from assistant.chroma_memory_candidate_retriever import (
+from assistant.voice_assistant import VoiceAssistant
+from assistant.memory.retrieval.chroma_candidate_retriever import (
     ChromaMemoryCandidateRetriever,
 )
-from assistant.chroma_memory_history_store import (
+from assistant.memory.history.chroma import (
     ChromaMemoryHistoryStore,
 )
-from assistant.chroma_memory_store import (
+from assistant.memory.storage.chroma import (
     ChromaMemoryStore,
 )
-from assistant.chroma_retriever import ChromaRetriever
-from assistant.embeddings import OpenAIEmbeddingService
-from assistant.executor import ToolExecutor
+from assistant.memory.retrieval.chroma import ChromaRetriever
+from assistant.memory.embeddings import OpenAIEmbeddingService
+from assistant.tools.executor import ToolExecutor
 from assistant.health import (
     HealthCheckResult,
     HealthChecker,
 )
-from assistant.memory_candidate_ranker import (
+from assistant.memory.retrieval.candidate_ranker import (
     MemoryCandidateRanker,
 )
-from assistant.memory_confirmation import (
+from assistant.memory.confirmation import (
     ConsoleMemoryConfirmation,
 )
-from assistant.memory_extractor import MemoryExtractor
-from assistant.memory_manager import MemoryManager
-from assistant.memory_policy import MemoryPolicy
-from assistant.memory_resolver import MemoryResolver
-from assistant.permissions import PermissionManager
-from assistant.registry import ToolRegistry
-from assistant.resilient_memory_resolver import (
+from assistant.memory.extractor import MemoryExtractor
+from assistant.memory.manager import MemoryManager
+from assistant.memory.policy import MemoryPolicy
+from assistant.memory.resolution.rules import MemoryResolver
+from assistant.tools.permissions import PermissionManager
+from assistant.tools.registry import ToolRegistry
+from assistant.memory.resolution.resilient import (
     ResilientMemoryResolver,
 )
-from assistant.security import SecurityPolicy
-from assistant.tools import (
+from assistant.tools.security import SecurityPolicy
+from assistant.tools.builtin import (
     AssistantTools,
     build_tool_definitions,
 )

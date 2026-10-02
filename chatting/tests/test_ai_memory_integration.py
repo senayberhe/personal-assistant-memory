@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from assistant.memory_model import Memory
-from assistant.memory_resolution import (
+from assistant.memory.model import Memory
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory_resolution_result import (
+from assistant.memory.resolution.result import (
     MemoryResolutionResult,
 )
 from tests.fakes.ai_memory_resolver import (

@@ -1,17 +1,17 @@
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from assistant.ai_memory_resolver import (
+from assistant.memory.resolution.ai import (
     AIMemoryResolver,
 )
-from assistant.memory_candidate import (
+from assistant.memory.retrieval.candidate import (
     MemoryCandidate,
 )
-from assistant.memory_model import Memory
-from assistant.memory_resolution import (
+from assistant.memory.model import Memory
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory_resolution_schema import (
+from assistant.memory.resolution.schema import (
     AIResolution,
     AIMemoryResolution,
 )

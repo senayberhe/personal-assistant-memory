@@ -1,14 +1,14 @@
 from datetime import datetime
 
-from assistant.memory_event import (
+from assistant.memory.events.event import (
     MemoryEvent,
 )
 
-from assistant.memory_event_listener import (
+from assistant.memory.events.listener import (
     MemoryEventListener,
 )
 
-from assistant.memory_event_publisher import (
+from assistant.memory.events.publisher import (
     MemoryEventPublisher,
 )
 

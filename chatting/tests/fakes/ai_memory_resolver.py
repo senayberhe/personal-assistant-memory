@@ -1,5 +1,5 @@
-from assistant.memory_model import Memory
-from assistant.memory_resolution_result import (
+from assistant.memory.model import Memory
+from assistant.memory.resolution.result import (
     MemoryResolutionResult,
 )
 

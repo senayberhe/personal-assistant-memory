@@ -4,10 +4,10 @@ import pytest
 
 from assistant.errors import ToolError
 
-from assistant.executor import (
+from assistant.tools.executor import (
     ToolExecutor,
 )
-from assistant.registry import (
+from assistant.tools.registry import (
     Tool,
     ToolRegistry,
 )

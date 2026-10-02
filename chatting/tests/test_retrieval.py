@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from assistant.embeddings import (
+from assistant.memory.embeddings import (
     SimpleEmbeddingService,
 )
-from assistant.in_memory_retriever import (
+from assistant.memory.retrieval.in_memory import (
     InMemoryRetriever,
 )
-from assistant.in_memory_store import (
+from assistant.memory.storage.in_memory import (
     InMemoryStore,
 )
 from assistant.memory import Memory

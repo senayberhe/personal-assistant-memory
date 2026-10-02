@@ -1,9 +1,9 @@
 import pytest
 
-from assistant.memory_resolution import (
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory_resolution_schema import (
+from assistant.memory.resolution.schema import (
     AIResolution,
     AIMemoryResolution,
 )

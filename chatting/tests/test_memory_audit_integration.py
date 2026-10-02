@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from assistant.memory_audit import (
+from assistant.memory.audit.record import (
     MemoryAuditRecord,
 )
 

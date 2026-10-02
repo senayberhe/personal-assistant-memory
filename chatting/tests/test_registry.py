@@ -1,4 +1,4 @@
-from assistant.registry import (
+from assistant.tools.registry import (
     Tool,
     ToolRegistry,
 )

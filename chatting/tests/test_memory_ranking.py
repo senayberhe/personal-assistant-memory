@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 
 from assistant.memory import Memory
-from assistant.memory_ranking import (
+from assistant.memory.ranking import (
     calculate_final_score,
     calculate_recency,
     rank_memories,
 )
-from assistant.retrieval import RetrievedMemory
+from assistant.memory.retrieval.base import RetrievedMemory
 
 
 def test_new_memory_has_higher_recency():
@@ -200,9 +200,9 @@ def test_empty_results_return_empty_list():
     assert ranked == []
 
 def test_memory_manager_recall_ranked_uses_scores():
-    from assistant.embeddings import SimpleEmbeddingService
-    from assistant.in_memory_retriever import InMemoryRetriever
-    from assistant.in_memory_store import InMemoryStore
+    from assistant.memory.embeddings import SimpleEmbeddingService
+    from assistant.memory.retrieval.in_memory import InMemoryRetriever
+    from assistant.memory.storage.in_memory import InMemoryStore
     from assistant.memory import MemoryManager
 
     store = InMemoryStore()

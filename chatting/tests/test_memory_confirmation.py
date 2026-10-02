@@ -1,10 +1,10 @@
 
-from assistant.memory_manager import (
+from assistant.memory.manager import (
     MemoryManager,
 )
-from assistant.memory_model import Memory
-from assistant.memory_policy import MemoryPolicy
-from assistant.memory_resolver import (
+from assistant.memory.model import Memory
+from assistant.memory.policy import MemoryPolicy
+from assistant.memory.resolution.rules import (
     MemoryResolver,
 )
 from tests.fakes.memory_confirmation import (

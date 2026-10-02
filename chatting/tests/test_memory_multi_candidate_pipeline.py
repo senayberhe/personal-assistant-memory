@@ -1,16 +1,16 @@
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from assistant.memory_candidate import (
+from assistant.memory.retrieval.candidate import (
     MemoryCandidate,
 )
-from assistant.memory_manager import (
+from assistant.memory.manager import (
     MemoryManager,
 )
-from assistant.memory_resolution import (
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory_resolution_result import (
+from assistant.memory.resolution.result import (
     MemoryResolutionResult,
 )
 
@@ -20,7 +20,7 @@ def create_memory(
     content: str,
     importance: float = 0.8,
 ):
-    from assistant.memory_model import Memory
+    from assistant.memory.model import Memory
 
     return Memory(
         id=memory_id,
@@ -89,7 +89,7 @@ def test_multi_candidate_pipeline_updates_target_memory():
 
     policy = MagicMock()
 
-    from assistant.memory_policy import (
+    from assistant.memory.policy import (
         MemoryPolicyDecision,
     )
 
@@ -187,7 +187,7 @@ def test_multi_candidate_pipeline_creates_new_memory():
 
     policy = MagicMock()
 
-    from assistant.memory_policy import (
+    from assistant.memory.policy import (
         MemoryPolicyDecision,
     )
 
@@ -239,8 +239,8 @@ def test_multi_candidate_pipeline_creates_new_memory():
     )
 
 def test_key_match_is_first_candidate_even_if_search_misses_it():
-    from assistant.in_memory_store import InMemoryStore
-    from assistant.memory_resolver import MemoryResolver
+    from assistant.memory.storage.in_memory import InMemoryStore
+    from assistant.memory.resolution.rules import MemoryResolver
     from tests.fakes.memory_confirmation import FakeMemoryConfirmation
 
     store = InMemoryStore()
@@ -272,8 +272,8 @@ def test_key_match_is_first_candidate_even_if_search_misses_it():
 
 
 def test_invalid_ai_answer_falls_back_to_rules():
-    from assistant.memory_resolver import MemoryResolver
-    from assistant.resilient_memory_resolver import ResilientMemoryResolver
+    from assistant.memory.resolution.rules import MemoryResolver
+    from assistant.memory.resolution.resilient import ResilientMemoryResolver
 
     ai_resolver = MagicMock()
     ai_resolver.resolve.side_effect = ValueError(

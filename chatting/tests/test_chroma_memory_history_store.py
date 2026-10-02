@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from assistant.chroma_memory_history_store import (
+from assistant.memory.history.chroma import (
     ChromaMemoryHistoryStore,
 )
-from assistant.memory_history import MemoryVersion
+from assistant.memory.history.model import MemoryVersion
 
 
 def create_version(

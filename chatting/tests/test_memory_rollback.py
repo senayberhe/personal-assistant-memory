@@ -1,10 +1,10 @@
-from assistant.chroma_memory_history_store import (
+from assistant.memory.history.chroma import (
     ChromaMemoryHistoryStore,
 )
-from assistant.chroma_memory_store import (
+from assistant.memory.storage.chroma import (
     ChromaMemoryStore,
 )
-from assistant.memory_manager import (
+from assistant.memory.manager import (
     MemoryManager,
 )
 

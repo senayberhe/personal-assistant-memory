@@ -1,4 +1,4 @@
-from assistant.memory_confirmation import (
+from assistant.memory.confirmation import (
     MemoryConfirmation,
 )
 

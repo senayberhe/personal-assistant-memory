@@ -2,9 +2,9 @@ from datetime import datetime
 
 import pytest
 
-from assistant.memory_candidate import MemoryCandidate
-from assistant.memory_model import Memory
-from assistant.memory_resolution_context import (
+from assistant.memory.retrieval.candidate import MemoryCandidate
+from assistant.memory.model import Memory
+from assistant.memory.resolution.context import (
     MemoryResolutionContextBuilder,
 )
 

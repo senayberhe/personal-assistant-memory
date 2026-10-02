@@ -63,12 +63,12 @@ from types import SimpleNamespace
 import pytest
 
 from assistant.agent import VoiceAgent
-from assistant.embeddings import SimpleEmbeddingService
+from assistant.memory.embeddings import SimpleEmbeddingService
 from assistant.errors import AgentError, PermissionDeniedError, ToolError
-from assistant.in_memory_retriever import InMemoryRetriever
-from assistant.in_memory_store import InMemoryStore
+from assistant.memory.retrieval.in_memory import InMemoryRetriever
+from assistant.memory.storage.in_memory import InMemoryStore
 from assistant.memory import MemoryManager
-from assistant.memory_extractor import MemoryExtractor
+from assistant.memory.extractor import MemoryExtractor
 
 
 def text_response(text):

@@ -1,5 +1,5 @@
-from assistant.memory_policy import MemoryPolicy
-from assistant.memory_resolution import (
+from assistant.memory.policy import MemoryPolicy
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
 

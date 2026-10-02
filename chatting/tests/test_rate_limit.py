@@ -1,4 +1,4 @@
-from assistant.rate_limit import (
+from assistant.tools.rate_limit import (
     RateLimiter,
 )
 

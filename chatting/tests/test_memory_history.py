@@ -2,10 +2,10 @@ from assistant.memory import (
     Memory,
     MemoryManager,
 )
-from assistant.memory_history import (
+from assistant.memory.history.model import (
     MemoryVersion,
 )
-from assistant.memory_history_store import (
+from assistant.memory.history.base import (
     MemoryHistoryStore,
 )
 
@@ -337,7 +337,8 @@ def test_upsert_with_same_content_is_ignored():
 
 
 def test_memory_module_reexports_single_memory_class():
-    from assistant import memory, memory_manager, memory_model
+    from assistant import memory
+    from assistant.memory import manager, model
 
-    assert memory.Memory is memory_model.Memory
-    assert memory.MemoryManager is memory_manager.MemoryManager
+    assert memory.Memory is model.Memory
+    assert memory.MemoryManager is manager.MemoryManager

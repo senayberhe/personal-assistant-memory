@@ -9,8 +9,8 @@ from assistant.errors import (
     ToolError,
 )
 from assistant.memory import ConversationMemory
-from assistant.memory_context import format_memory_context
-from assistant.memory_deduplicator import MemoryDeduplicator
+from assistant.memory.context import format_memory_context
+from assistant.memory.deduplicator import MemoryDeduplicator
 from assistant.observability import measure_time
 from config.settings import Settings
 

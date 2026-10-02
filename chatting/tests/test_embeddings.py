@@ -1,4 +1,4 @@
-from assistant.embeddings import (
+from assistant.memory.embeddings import (
     SimpleEmbeddingService,
 )
 

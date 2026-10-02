@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from assistant.in_memory_memory_audit_store import (
+from assistant.memory.audit.in_memory import (
     InMemoryMemoryAuditStore,
 )
-from assistant.memory_audit import (
+from assistant.memory.audit.record import (
     MemoryAuditRecord,
 )
 

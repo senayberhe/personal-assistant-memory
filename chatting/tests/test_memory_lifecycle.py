@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from assistant.memory import Memory
-from assistant.memory_lifecycle import (
+from assistant.memory.lifecycle import (
     MemoryLifecycle,
 )
 

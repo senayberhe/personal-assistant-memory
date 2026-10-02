@@ -2,13 +2,13 @@ import pytest
 
 from datetime import datetime, timedelta
 
-from assistant.memory_candidate import (
+from assistant.memory.retrieval.candidate import (
     MemoryCandidate,
 )
-from assistant.memory_candidate_ranker import (
+from assistant.memory.retrieval.candidate_ranker import (
     MemoryCandidateRanker,
 )
-from assistant.memory_model import Memory
+from assistant.memory.model import Memory
 
 
 def create_memory(

@@ -3,14 +3,14 @@ from unittest.mock import MagicMock
 
 import openai
 
-from assistant.memory_model import Memory
-from assistant.memory_resolution import (
+from assistant.memory.model import Memory
+from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory_resolution_result import (
+from assistant.memory.resolution.result import (
     MemoryResolutionResult,
 )
-from assistant.resilient_memory_resolver import (
+from assistant.memory.resolution.resilient import (
     ResilientMemoryResolver,
 )
 

@@ -1,6 +1,6 @@
 import pytest
 
-from assistant.similarity import cosine_similarity
+from assistant.memory.similarity import cosine_similarity
 
 
 def test_identical_vectors_have_similarity_one():

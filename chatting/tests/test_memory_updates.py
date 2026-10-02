@@ -1,7 +1,7 @@
 import pytest
 
 from assistant.memory import Memory
-from assistant.memory_store import MemoryStore
+from assistant.memory.storage.base import MemoryStore
 
 
 class FakeMemoryStore(MemoryStore):

@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from assistant.embeddings import OpenAIEmbeddingService
+from assistant.memory.embeddings import OpenAIEmbeddingService
 
 
 def test_openai_embedding_service():

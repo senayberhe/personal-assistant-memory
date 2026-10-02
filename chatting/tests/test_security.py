@@ -1,4 +1,4 @@
-from assistant.security import (
+from assistant.tools.security import (
     RiskLevel,
     SecurityPolicy,
 )

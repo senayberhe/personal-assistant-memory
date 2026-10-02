@@ -65,14 +65,14 @@ def test_factory_wires_history_and_health_checks(tmp_path):
 
 
 def test_factory_uses_ai_memory_resolver(tmp_path):
-    from assistant.ai_memory_resolver import AIMemoryResolver
-    from assistant.chroma_memory_candidate_retriever import (
+    from assistant.memory.resolution.ai import AIMemoryResolver
+    from assistant.memory.retrieval.chroma_candidate_retriever import (
         ChromaMemoryCandidateRetriever,
     )
-    from assistant.memory_confirmation import ConsoleMemoryConfirmation
-    from assistant.memory_policy import MemoryPolicy
-    from assistant.memory_resolver import MemoryResolver
-    from assistant.resilient_memory_resolver import ResilientMemoryResolver
+    from assistant.memory.confirmation import ConsoleMemoryConfirmation
+    from assistant.memory.policy import MemoryPolicy
+    from assistant.memory.resolution.rules import MemoryResolver
+    from assistant.memory.resolution.resilient import ResilientMemoryResolver
 
     settings = Settings(
         openai_api_key="test-key",
