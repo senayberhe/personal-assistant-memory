@@ -1,11 +1,11 @@
-from assistant.memory.retrieval.candidate import (
-    MemoryCandidate,
+from assistant.memory.resolution.evidence import (
+    ResolutionEvidence,
 )
 from assistant.memory.resolution.result import (
     MemoryResolutionResult,
 )
-from assistant.memory.resolution.evidence import (
-    ResolutionEvidence,
+from assistant.memory.retrieval.candidate import (
+    MemoryCandidate,
 )
 
 

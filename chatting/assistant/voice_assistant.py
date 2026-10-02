@@ -4,7 +4,6 @@ from assistant.errors import (
     PermissionDeniedError,
     ToolError,
 )
-
 from assistant.observability import (
     request_context,
 )

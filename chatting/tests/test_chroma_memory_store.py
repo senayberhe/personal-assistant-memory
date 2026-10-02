@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
-from assistant.memory.storage.chroma import ChromaMemoryStore
+
 from assistant.memory import Memory
+from assistant.memory.storage.chroma import ChromaMemoryStore
 from tests.fakes.memory_confirmation import FakeMemoryConfirmation
 
 
@@ -79,9 +80,9 @@ def test_memory_metadata_persists(tmp_path):
     assert retrieved.memory_type == memory.memory_type
 
 def test_store_and_retriever_share_embeddings(tmp_path):
-    from assistant.memory.retrieval.chroma import ChromaRetriever
-    from assistant.memory.embeddings import SimpleEmbeddingService
     from assistant.memory import MemoryManager
+    from assistant.memory.embeddings import SimpleEmbeddingService
+    from assistant.memory.retrieval.chroma import ChromaRetriever
 
     embeddings = SimpleEmbeddingService()
 
@@ -151,9 +152,9 @@ def test_memory_key_and_expiry_persist(tmp_path):
 
 
 def test_upsert_with_chroma_updates_in_place(tmp_path):
-    from assistant.memory.retrieval.chroma import ChromaRetriever
-    from assistant.memory.embeddings import SimpleEmbeddingService
     from assistant.memory import MemoryManager
+    from assistant.memory.embeddings import SimpleEmbeddingService
+    from assistant.memory.retrieval.chroma import ChromaRetriever
 
     embeddings = SimpleEmbeddingService()
 
@@ -177,9 +178,9 @@ def test_upsert_with_chroma_updates_in_place(tmp_path):
 
 
 def test_expired_memories_are_not_recalled(tmp_path):
-    from assistant.memory.retrieval.chroma import ChromaRetriever
-    from assistant.memory.embeddings import SimpleEmbeddingService
     from assistant.memory import MemoryManager
+    from assistant.memory.embeddings import SimpleEmbeddingService
+    from assistant.memory.retrieval.chroma import ChromaRetriever
 
     embeddings = SimpleEmbeddingService()
 
@@ -208,10 +209,10 @@ def test_expired_memories_are_not_recalled(tmp_path):
 
 
 def test_version_persists(tmp_path):
-    from assistant.memory.retrieval.chroma import ChromaRetriever
+    from assistant.memory import MemoryManager
     from assistant.memory.embeddings import SimpleEmbeddingService
     from assistant.memory.history.in_memory import InMemoryHistoryStore
-    from assistant.memory import MemoryManager
+    from assistant.memory.retrieval.chroma import ChromaRetriever
 
     embeddings = SimpleEmbeddingService()
 

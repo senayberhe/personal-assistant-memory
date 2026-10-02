@@ -5,7 +5,6 @@ from assistant.memory.events.listener import (
     MemoryEventListener,
 )
 
-
 logger = logging.getLogger(__name__)
 
 

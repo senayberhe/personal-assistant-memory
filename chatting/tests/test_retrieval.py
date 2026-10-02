@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from assistant.memory import Memory
 from assistant.memory.embeddings import (
     SimpleEmbeddingService,
 )
@@ -9,7 +10,6 @@ from assistant.memory.retrieval.in_memory import (
 from assistant.memory.storage.in_memory import (
     InMemoryStore,
 )
-from assistant.memory import Memory
 
 
 def test_retriever_returns_memories():

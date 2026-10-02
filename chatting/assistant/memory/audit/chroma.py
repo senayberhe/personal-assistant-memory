@@ -2,12 +2,11 @@ from datetime import datetime
 
 import chromadb
 
-from assistant.memory.audit.record import (
-    MemoryAuditRecord,
-)
-
 from assistant.memory.audit.base import (
     MemoryAuditStore,
+)
+from assistant.memory.audit.record import (
+    MemoryAuditRecord,
 )
 
 

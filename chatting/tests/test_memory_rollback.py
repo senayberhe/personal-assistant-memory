@@ -1,11 +1,11 @@
 from assistant.memory.history.chroma import (
     ChromaMemoryHistoryStore,
 )
-from assistant.memory.storage.chroma import (
-    ChromaMemoryStore,
-)
 from assistant.memory.manager import (
     MemoryManager,
+)
+from assistant.memory.storage.chroma import (
+    ChromaMemoryStore,
 )
 
 

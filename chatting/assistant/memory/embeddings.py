@@ -1,8 +1,9 @@
-from abc import ABC, abstractmethod
 import hashlib
-from openai import OpenAI
-from config.settings import Settings
+from abc import ABC, abstractmethod
 
+from openai import OpenAI
+
+from config.settings import Settings
 
 
 class EmbeddingService(ABC):

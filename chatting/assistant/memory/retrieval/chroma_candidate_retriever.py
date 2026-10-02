@@ -1,8 +1,8 @@
-from assistant.memory.retrieval.chroma import ChromaRetriever
 from assistant.memory.retrieval.candidate import MemoryCandidate
 from assistant.memory.retrieval.candidate_retriever import (
     MemoryCandidateRetriever,
 )
+from assistant.memory.retrieval.chroma import ChromaRetriever
 
 
 class ChromaMemoryCandidateRetriever(

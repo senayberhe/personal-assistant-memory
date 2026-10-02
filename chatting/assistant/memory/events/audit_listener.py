@@ -1,15 +1,12 @@
-from assistant.memory.audit.record import (
-    MemoryAuditRecord,
-)
-
 from assistant.memory.audit.base import (
     MemoryAuditStore,
 )
-
+from assistant.memory.audit.record import (
+    MemoryAuditRecord,
+)
 from assistant.memory.events.event import (
     MemoryEvent,
 )
-
 from assistant.memory.events.listener import (
     MemoryEventListener,
 )

@@ -1,16 +1,16 @@
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
-from assistant.memory.resolution.types import (
-    MemoryResolution,
-)
 from assistant.memory.resolution.result import (
     MemoryResolutionResult,
 )
+from assistant.memory.resolution.types import (
+    MemoryResolution,
+)
 
 
-class AIResolution(str, Enum):
+class AIResolution(StrEnum):
     """
     Possible relationships between a new memory
     and existing memory candidates.

@@ -1,7 +1,7 @@
 [project]
 name = "python-proj"
 version = "0.1.0"
-description = "Add your description here"
+description = "Voice and text assistant with tool calling and long-term memory."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -16,7 +16,55 @@ dependencies = [
     "pandas>=3.0.6",
     "pyaudio>=0.2.14",
     "pydantic>=2.13.5",
-    "pytest>=9.1.1",
     "python-dotenv>=1.2.3",
+    "rich>=15.0.0",
     "speechrecognition>=3.17.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+# ---------------------------------------------------------------
+# Tooling. Run everything from the repository root or chatting/:
+#
+#   uv run pytest
+#   ruff check chatting
+#   mypy
+# ---------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["chatting/tests"]
+# Lets tests import `assistant`, `config` and `services`
+# no matter which directory pytest is started from.
+pythonpath = ["chatting"]
+addopts = "-q"
+filterwarnings = [
+    # speech_recognition imports the removed `aifc` module.
+    "ignore:aifc was removed:DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py313"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = [
+    "F",   # pyflakes: unused imports, undefined names
+    "E9",  # syntax errors
+    "B",   # bugbear: likely bugs
+    "I",   # import sorting
+    "UP",  # modern Python syntax
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["assistant", "config", "services", "tests"]
+
+[tool.mypy]
+python_version = "3.13"
+files = ["chatting/assistant", "chatting/services", "chatting/config", "chatting/main.py"]
+mypy_path = "chatting"
+explicit_package_bases = true
+ignore_missing_imports = true
+warn_unused_ignores = true

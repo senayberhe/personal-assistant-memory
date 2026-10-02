@@ -1,9 +1,8 @@
 import logging
 import uuid
-from contextvars import ContextVar
 from contextlib import contextmanager
+from contextvars import ContextVar
 from time import perf_counter
-
 
 request_id_context: ContextVar[str|None] = ContextVar("request_id_context", default=None)
 

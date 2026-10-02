@@ -1,5 +1,4 @@
 import webbrowser
-
 from urllib.parse import quote_plus
 
 

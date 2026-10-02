@@ -1,24 +1,8 @@
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-
-from assistant.memory.audit.record import (
-    MemoryAuditRecord,
-)
-
 from assistant.memory.audit.base import (
     MemoryAuditStore,
-)
-
-
-from assistant.memory.retrieval.candidate import (
-    MemoryCandidate,
-)
-from assistant.memory.retrieval.candidate_retriever import (
-    MemoryCandidateRetriever,
-)
-from assistant.memory.retrieval.candidate_ranker import (
-    MemoryCandidateRanker,
 )
 from assistant.memory.confirmation import (
     MemoryConfirmation,
@@ -39,11 +23,20 @@ from assistant.memory.policy import (
 from assistant.memory.ranking import (
     rank_memories,
 )
+from assistant.memory.resolution.protocol import (
+    MemoryResolverProtocol,
+)
 from assistant.memory.resolution.rules import (
     MemoryResolver,
 )
-from assistant.memory.resolution.protocol import (
-    MemoryResolverProtocol,
+from assistant.memory.retrieval.candidate import (
+    MemoryCandidate,
+)
+from assistant.memory.retrieval.candidate_ranker import (
+    MemoryCandidateRanker,
+)
+from assistant.memory.retrieval.candidate_retriever import (
+    MemoryCandidateRetriever,
 )
 
 

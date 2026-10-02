@@ -1,17 +1,17 @@
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from assistant.memory.retrieval.candidate import (
-    MemoryCandidate,
-)
 from assistant.memory.manager import (
     MemoryManager,
+)
+from assistant.memory.resolution.result import (
+    MemoryResolutionResult,
 )
 from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory.resolution.result import (
-    MemoryResolutionResult,
+from assistant.memory.retrieval.candidate import (
+    MemoryCandidate,
 )
 
 
@@ -239,8 +239,8 @@ def test_multi_candidate_pipeline_creates_new_memory():
     )
 
 def test_key_match_is_first_candidate_even_if_search_misses_it():
-    from assistant.memory.storage.in_memory import InMemoryStore
     from assistant.memory.resolution.rules import MemoryResolver
+    from assistant.memory.storage.in_memory import InMemoryStore
     from tests.fakes.memory_confirmation import FakeMemoryConfirmation
 
     store = InMemoryStore()
@@ -272,8 +272,8 @@ def test_key_match_is_first_candidate_even_if_search_misses_it():
 
 
 def test_invalid_ai_answer_falls_back_to_rules():
-    from assistant.memory.resolution.rules import MemoryResolver
     from assistant.memory.resolution.resilient import ResilientMemoryResolver
+    from assistant.memory.resolution.rules import MemoryResolver
 
     ai_resolver = MagicMock()
     ai_resolver.resolve.side_effect = ValueError(

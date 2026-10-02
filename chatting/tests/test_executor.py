@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from assistant.errors import ToolError
-
 from assistant.tools.executor import (
     ToolExecutor,
 )

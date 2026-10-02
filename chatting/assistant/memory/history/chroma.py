@@ -2,10 +2,10 @@ from datetime import datetime
 
 import chromadb
 
-from assistant.memory.history.model import MemoryVersion
 from assistant.memory.history.base import (
     MemoryHistoryStore,
 )
+from assistant.memory.history.model import MemoryVersion
 
 
 class ChromaMemoryHistoryStore(

@@ -1,24 +1,8 @@
 from assistant.application import Application
 from assistant.factory import ApplicationFactory
-from config.settings import Settings
 
 
-def test_factory_creates_application(tmp_path):
-
-    settings = Settings(
-        openai_api_key="test-key",
-        model="test-model",
-        environment="testing",
-        log_level="WARNING",
-        api_timeout=30,
-        tool_timeout=10,
-        max_agent_steps=10,
-        max_plan_steps=10,
-        speech_timeout=5,
-        phrase_time_limit=8,
-        ambient_noise_duration=1,
-        memory_directory=str(tmp_path),
-    )
+def test_factory_creates_application(settings):
 
     factory = ApplicationFactory(
         settings=settings
@@ -32,21 +16,7 @@ def test_factory_creates_application(tmp_path):
     )
 
 
-def test_factory_wires_history_and_health_checks(tmp_path):
-    settings = Settings(
-        openai_api_key="test-key",
-        model="test-model",
-        environment="testing",
-        log_level="WARNING",
-        api_timeout=30,
-        tool_timeout=10,
-        max_agent_steps=10,
-        max_plan_steps=10,
-        speech_timeout=5,
-        phrase_time_limit=8,
-        ambient_noise_duration=1,
-        memory_directory=str(tmp_path),
-    )
+def test_factory_wires_history_and_health_checks(settings, tmp_path):
 
     application = ApplicationFactory(settings=settings).create()
 
@@ -64,30 +34,16 @@ def test_factory_wires_history_and_health_checks(tmp_path):
     assert results["memory"].healthy
 
 
-def test_factory_uses_ai_memory_resolver(tmp_path):
+def test_factory_uses_ai_memory_resolver(settings):
+    from assistant.memory.confirmation import ConsoleMemoryConfirmation
+    from assistant.memory.policy import MemoryPolicy
     from assistant.memory.resolution.ai import AIMemoryResolver
+    from assistant.memory.resolution.resilient import ResilientMemoryResolver
+    from assistant.memory.resolution.rules import MemoryResolver
     from assistant.memory.retrieval.chroma_candidate_retriever import (
         ChromaMemoryCandidateRetriever,
     )
-    from assistant.memory.confirmation import ConsoleMemoryConfirmation
-    from assistant.memory.policy import MemoryPolicy
-    from assistant.memory.resolution.rules import MemoryResolver
-    from assistant.memory.resolution.resilient import ResilientMemoryResolver
 
-    settings = Settings(
-        openai_api_key="test-key",
-        model="test-model",
-        environment="testing",
-        log_level="WARNING",
-        api_timeout=30,
-        tool_timeout=10,
-        max_agent_steps=10,
-        max_plan_steps=10,
-        speech_timeout=5,
-        phrase_time_limit=8,
-        ambient_noise_duration=1,
-        memory_directory=str(tmp_path),
-    )
 
     application = ApplicationFactory(settings=settings).create()
 

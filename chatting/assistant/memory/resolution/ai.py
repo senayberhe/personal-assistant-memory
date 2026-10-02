@@ -1,25 +1,25 @@
 from openai import OpenAI
 from pydantic import ValidationError
 
-from assistant.memory.retrieval.candidate import (
-    MemoryCandidate,
-)
 from assistant.memory.model import Memory
-from assistant.memory.resolution.types import (
-    MemoryResolution,
-)
-from assistant.memory.resolution.result import (
-    MemoryResolutionResult,
-)
 from assistant.memory.resolution.context import (
     MemoryResolutionContextBuilder,
 )
 from assistant.memory.resolution.prompt import (
     MemoryResolutionPromptBuilder,
 )
+from assistant.memory.resolution.result import (
+    MemoryResolutionResult,
+)
 from assistant.memory.resolution.schema import (
     AIMemoryResolution,
     AIResolution,
+)
+from assistant.memory.resolution.types import (
+    MemoryResolution,
+)
+from assistant.memory.retrieval.candidate import (
+    MemoryCandidate,
 )
 from config.settings import Settings
 

@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from assistant.memory.retrieval.candidate import MemoryCandidate
 from assistant.memory.model import Memory
 from assistant.memory.resolution.context import (
     MemoryResolutionContextBuilder,
@@ -8,6 +7,7 @@ from assistant.memory.resolution.context import (
 from assistant.memory.resolution.prompt import (
     MemoryResolutionPromptBuilder,
 )
+from assistant.memory.retrieval.candidate import MemoryCandidate
 
 
 def create_candidate(

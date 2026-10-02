@@ -3,11 +3,9 @@ import logging
 from assistant.memory.events.event import (
     MemoryEvent,
 )
-
 from assistant.memory.events.listener import (
     MemoryEventListener,
 )
-
 
 logger = logging.getLogger(
     "assistant.memory"

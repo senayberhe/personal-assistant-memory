@@ -14,7 +14,6 @@ from assistant.memory.deduplicator import MemoryDeduplicator
 from assistant.observability import measure_time
 from config.settings import Settings
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -1,8 +1,8 @@
-from assistant.memory.retrieval.candidate import MemoryCandidate
 from assistant.memory.ranking import (
-    calculate_recency,
     calculate_final_score,
+    calculate_recency,
 )
+from assistant.memory.retrieval.candidate import MemoryCandidate
 
 
 class MemoryCandidateRanker:

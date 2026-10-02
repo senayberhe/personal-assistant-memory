@@ -1,7 +1,7 @@
 from assistant.memory.embeddings import EmbeddingService
-from assistant.memory.storage.base import MemoryStore
 from assistant.memory.retrieval.base import RetrievedMemory, Retriever
 from assistant.memory.similarity import cosine_similarity
+from assistant.memory.storage.base import MemoryStore
 
 
 class InMemoryRetriever(Retriever):

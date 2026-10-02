@@ -1,6 +1,6 @@
 from assistant.memory.embeddings import EmbeddingService
-from assistant.memory.storage.chroma import memory_from_chroma
 from assistant.memory.retrieval.base import RetrievedMemory, Retriever
+from assistant.memory.storage.chroma import memory_from_chroma
 
 
 class ChromaRetriever(Retriever):

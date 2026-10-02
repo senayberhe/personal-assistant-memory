@@ -2,7 +2,6 @@ import logging
 
 import speech_recognition as sr
 
-
 logger = logging.getLogger(__name__)
 
 

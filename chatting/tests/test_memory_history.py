@@ -2,11 +2,11 @@ from assistant.memory import (
     Memory,
     MemoryManager,
 )
-from assistant.memory.history.model import (
-    MemoryVersion,
-)
 from assistant.memory.history.base import (
     MemoryHistoryStore,
+)
+from assistant.memory.history.model import (
+    MemoryVersion,
 )
 
 

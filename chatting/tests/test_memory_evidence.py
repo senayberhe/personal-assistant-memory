@@ -2,21 +2,21 @@ from datetime import datetime
 
 import pytest
 
-from assistant.memory.retrieval.candidate import (
-    MemoryCandidate,
+from assistant.memory.model import Memory
+from assistant.memory.resolution.evidence import (
+    ResolutionEvidence,
 )
 from assistant.memory.resolution.evidence_builder import (
     MemoryEvidenceBuilder,
 )
-from assistant.memory.model import Memory
+from assistant.memory.resolution.result import (
+    MemoryResolutionResult,
+)
 from assistant.memory.resolution.types import (
     MemoryResolution,
 )
-from assistant.memory.resolution.evidence import (
-    ResolutionEvidence,
-)
-from assistant.memory.resolution.result import (
-    MemoryResolutionResult,
+from assistant.memory.retrieval.candidate import (
+    MemoryCandidate,
 )
 
 

@@ -1,6 +1,6 @@
 from assistant.health import (
-    HealthCheckResult,
     HealthChecker,
+    HealthCheckResult,
 )
 
 

@@ -2,20 +2,19 @@ import logging
 
 import openai
 
+from assistant.memory.model import Memory
 from assistant.memory.resolution.ai import (
     AIMemoryResolver,
 )
-from assistant.memory.retrieval.candidate import (
-    MemoryCandidate,
-)
-from assistant.memory.model import Memory
 from assistant.memory.resolution.result import (
     MemoryResolutionResult,
 )
 from assistant.memory.resolution.rules import (
     MemoryResolver,
 )
-
+from assistant.memory.retrieval.candidate import (
+    MemoryCandidate,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -3,11 +3,9 @@ from datetime import datetime
 from assistant.memory.events.event import (
     MemoryEvent,
 )
-
 from assistant.memory.events.listener import (
     MemoryEventListener,
 )
-
 from assistant.memory.events.publisher import (
     MemoryEventPublisher,
 )

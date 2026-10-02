@@ -5,7 +5,6 @@ from assistant.errors import (
     ToolError,
 )
 
-
 logger = logging.getLogger(__name__)
 
 

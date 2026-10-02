@@ -3,7 +3,6 @@ from datetime import datetime
 from assistant.memory.audit.chroma import (
     ChromaMemoryAuditStore,
 )
-
 from assistant.memory.audit.record import (
     MemoryAuditRecord,
 )

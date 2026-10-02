@@ -5,7 +5,6 @@ from services.applications import ApplicationService
 from services.browser import BrowserService
 from services.search import SearchService
 
-
 # -------------------------
 # Argument Models
 # -------------------------

@@ -6,10 +6,8 @@ from assistant.errors import (
     ConfigurationError,
 )
 from assistant.factory import ApplicationFactory
-
 from config.logging_config import configure_logging
 from config.settings import Settings
-
 
 logger = logging.getLogger(__name__)
 

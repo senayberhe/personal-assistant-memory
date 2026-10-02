@@ -1,11 +1,9 @@
 import os
-
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
 from assistant.errors import ConfigurationError
-
 
 load_dotenv()
 

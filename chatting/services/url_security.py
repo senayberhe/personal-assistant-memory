@@ -1,6 +1,5 @@
 from urllib.parse import urlparse
 
-
 ALLOWED_SCHEMES = {
     "http",
     "https",

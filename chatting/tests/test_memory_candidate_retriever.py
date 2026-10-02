@@ -1,14 +1,14 @@
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from assistant.memory.retrieval.chroma_candidate_retriever import (
-    ChromaMemoryCandidateRetriever,
-)
+from assistant.memory.model import Memory
+from assistant.memory.retrieval.base import RetrievedMemory
 from assistant.memory.retrieval.candidate import (
     MemoryCandidate,
 )
-from assistant.memory.model import Memory
-from assistant.memory.retrieval.base import RetrievedMemory
+from assistant.memory.retrieval.chroma_candidate_retriever import (
+    ChromaMemoryCandidateRetriever,
+)
 
 
 def test_retrieve_candidates():

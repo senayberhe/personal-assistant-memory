@@ -8,7 +8,6 @@ from assistant.errors import ServiceError
 from config.settings import Settings
 from services.url_security import validate_url
 
-
 logger = logging.getLogger(__name__)
 
 
