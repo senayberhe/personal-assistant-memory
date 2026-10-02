@@ -1,0 +1,22 @@
+[project]
+name = "python-proj"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "chromadb>=1.5.9",
+    "gtts>=2.5.4",
+    "ipykernel>=7.4.0",
+    "jupyterlab>=4.6.4",
+    "matplotlib>=3.11.2",
+    "notebook>=7.6.3",
+    "numpy>=2.5.3",
+    "openai>=3.22.1",
+    "pandas>=3.0.6",
+    "pyaudio>=0.2.14",
+    "pydantic>=2.13.5",
+    "pytest>=9.1.1",
+    "python-dotenv>=1.2.3",
+    "speechrecognition>=3.17.0",
+]

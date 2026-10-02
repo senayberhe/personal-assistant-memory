@@ -1,0 +1,65 @@
+from assistant.application import Application
+from assistant.factory import ApplicationFactory
+from config.settings import Settings
+
+
+def test_factory_creates_application(tmp_path):
+
+    settings = Settings(
+        openai_api_key="test-key",
+        model="test-model",
+        environment="testing",
+        log_level="WARNING",
+        api_timeout=30,
+        tool_timeout=10,
+        max_agent_steps=10,
+        max_plan_steps=10,
+        speech_timeout=5,
+        phrase_time_limit=8,
+        ambient_noise_duration=1,
+        memory_directory=str(tmp_path),
+    )
+
+    factory = ApplicationFactory(
+        settings=settings
+    )
+
+    application = factory.create()
+
+    assert isinstance(
+        application,
+        Application,
+    )
+
+
+def test_factory_wires_history_and_health_checks(tmp_path):
+    settings = Settings(
+        openai_api_key="test-key",
+        model="test-model",
+        environment="testing",
+        log_level="WARNING",
+        api_timeout=30,
+        tool_timeout=10,
+        max_agent_steps=10,
+        max_plan_steps=10,
+        speech_timeout=5,
+        phrase_time_limit=8,
+        ambient_noise_duration=1,
+        memory_directory=str(tmp_path),
+    )
+
+    application = ApplicationFactory(settings=settings).create()
+
+    memory_manager = application.assistant.agent.memory_manager
+
+    assert memory_manager.history_store is not None
+    assert memory_manager.store.embedding_service is not None
+    assert (tmp_path / "chroma.sqlite3").exists()
+
+    results = {
+        result.name: result
+        for result in application.health_checker.run()
+    }
+
+    assert results["memory"].healthy
+
