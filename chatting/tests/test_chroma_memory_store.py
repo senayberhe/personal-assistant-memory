@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from assistant.chroma_memory_store import ChromaMemoryStore
 from assistant.memory import Memory
+from tests.fakes.memory_confirmation import FakeMemoryConfirmation
 
 
 def test_save_and_get_memory(tmp_path):
@@ -165,6 +166,7 @@ def test_upsert_with_chroma_updates_in_place(tmp_path):
     manager = MemoryManager(
         store=store,
         retriever=ChromaRetriever(store.collection, embeddings),
+        confirmation=FakeMemoryConfirmation(approved=True),
     )
 
     first = manager.upsert("I prefer Python.", memory_key="lang")
@@ -225,6 +227,7 @@ def test_version_persists(tmp_path):
         store=store,
         retriever=ChromaRetriever(store.collection, embeddings),
         history_store=history,
+        confirmation=FakeMemoryConfirmation(approved=True),
     )
 
     memory = manager.upsert("I prefer Python.", memory_key="lang")

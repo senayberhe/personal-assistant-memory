@@ -3,8 +3,11 @@ from enum import Enum
 
 class MemoryResolution(Enum):
     """
-    Describes what should happen to a new memory.
+    Describes how a new memory relates to an
+    existing memory.
     """
     CREATE = "create"
     UPDATE = "update"
     IGNORE = "ignore"
+    CONTRADICT = "contradict"
+    UNRELATED = "unrelated"

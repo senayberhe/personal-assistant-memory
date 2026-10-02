@@ -1,5 +1,7 @@
 import pytest
 
+from tests.fakes.memory_confirmation import FakeMemoryConfirmation
+
 from assistant.memory import MemoryManager
 from assistant.memory_store import MemoryStore
 from assistant.memory import Memory
@@ -61,9 +63,12 @@ def create_manager() -> MemoryManager:
 
     retriever = FakeRetriever()
 
+    # Changing a preference is an uncertain update under
+    # MemoryPolicy, so approve confirmations automatically.
     return MemoryManager(
         store=store,
         retriever=retriever,
+        confirmation=FakeMemoryConfirmation(approved=True),
     )
 
 

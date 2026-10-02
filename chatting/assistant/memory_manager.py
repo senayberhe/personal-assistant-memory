@@ -4,6 +4,9 @@ from uuid import uuid4
 from assistant.memory_history import (
     MemoryVersion,
 )
+from assistant.memory_policy import (
+    MemoryPolicy,
+)
 from assistant.memory_lifecycle import (
     MemoryLifecycle,
 )
@@ -14,11 +17,16 @@ from assistant.memory_model import (
 from assistant.memory_ranking import (
     rank_memories,
 )
-from assistant.memory_resolution import (
-    MemoryResolution,
-)
 from assistant.memory_resolver import (
     MemoryResolver,
+)
+from assistant.memory_resolver_protocol import (
+    MemoryResolverProtocol,
+)
+
+from assistant.memory_confirmation import (
+    ConsoleMemoryConfirmation,
+    MemoryConfirmation,
 )
 
 
@@ -44,8 +52,10 @@ class MemoryManager:
         self,
         store,
         retriever,
-        resolver: MemoryResolver | None = None,
+        resolver: MemoryResolverProtocol | None = None,
         history_store=None,
+        policy: MemoryPolicy | None = None,
+        confirmation: MemoryConfirmation | None = None,
     ):
         self.store = store
 
@@ -58,6 +68,17 @@ class MemoryManager:
         )
 
         self.history_store = history_store
+
+        self.policy = (
+            policy
+            if policy is not None
+            else MemoryPolicy()
+        )
+        self.confirmation = (
+            confirmation
+            if confirmation is not None
+            else ConsoleMemoryConfirmation()
+        )
 
     # --------------------------------------------------
     # CREATE
@@ -292,16 +313,10 @@ class MemoryManager:
         """
         Create, update, or ignore a memory.
 
-        CREATE:
-            No memory exists with this key.
-
-        UPDATE:
-            A memory exists with this key,
-            but its content is different.
-
-        IGNORE:
-            The existing memory already contains
-            the same information.
+        1. The resolver decides how the new content
+           relates to the existing memory.
+        2. The policy decides what to do about it.
+        3. Risky updates ask for confirmation first.
         """
 
         if not memory_key.strip():
@@ -309,34 +324,31 @@ class MemoryManager:
                 "memory_key cannot be empty."
             )
 
-        existing_memories = (
-            self.find_by_key(
-                memory_key
-            )
+        existing_memories = self.find_by_key(
+            memory_key
         )
 
         existing_memory = None
 
         if existing_memories:
-            existing_memory = (
-                existing_memories[0]
-            )
+            existing_memory = existing_memories[0]
 
-        resolution = (
-            self.resolver.resolve(
-                new_content=content,
-                existing_memory=existing_memory,
-            )
+        result = self.resolver.resolve(
+            new_content=content,
+            existing_memory=existing_memory,
         )
 
-        # --------------------------------------------------
-        # CREATE
-        # --------------------------------------------------
+        decision = self.policy.decide(
+            result.resolution,
+            confidence=result.confidence,
+        )
 
-        if (
-            resolution
-            == MemoryResolution.CREATE
-        ):
+        if not decision.allowed:
+            raise PermissionError(
+                decision.reason
+            )
+
+        if decision.action == "create":
             return self.remember(
                 content=content,
                 memory_type=memory_type,
@@ -347,19 +359,35 @@ class MemoryManager:
                 memory_key=memory_key,
             )
 
-        # --------------------------------------------------
-        # UPDATE
-        # --------------------------------------------------
+        if existing_memory is None:
+            raise RuntimeError(
+                f"Policy requested '{decision.action}' "
+                "without an existing memory."
+            )
 
-        if (
-            resolution
-            == MemoryResolution.UPDATE
-        ):
-            if existing_memory is None:
-                raise RuntimeError(
-                    "Resolver requested UPDATE "
-                    "without an existing memory."
+        if decision.action == "ignore":
+            return existing_memory
+
+        if decision.action == "update":
+
+            if decision.requires_confirmation:
+
+                if self.confirmation is None:
+                    raise PermissionError(
+                        "Memory update requires "
+                        "confirmation."
+                    )
+
+                confirmed = self.confirmation.confirm(
+                    "The new memory conflicts with an "
+                    "existing memory. "
+                    f'Existing: "{existing_memory.content}" '
+                    f'New: "{content.strip()}". '
+                    "Should I update the existing memory?"
                 )
+
+                if not confirmed:
+                    return existing_memory
 
             return self.update_memory(
                 memory_id=existing_memory.id,
@@ -368,20 +396,9 @@ class MemoryManager:
                 metadata=metadata,
             )
 
-        # --------------------------------------------------
-        # IGNORE
-        # --------------------------------------------------
-
-        if (
-            resolution
-            == MemoryResolution.IGNORE
-            and existing_memory is not None
-        ):
-            return existing_memory
-
         raise RuntimeError(
-            f"Unknown memory resolution: "
-            f"{resolution}"
+            f"Unsupported policy action: "
+            f"{decision.action}"
         )
 
     # --------------------------------------------------
@@ -484,6 +501,78 @@ class MemoryManager:
 
         return self.history_store.get_history(
             memory_id
+        )
+
+    # --------------------------------------------------
+    # ROLLBACK
+    # --------------------------------------------------
+
+    def restore_memory_version(
+        self,
+        memory_id: str,
+        version: int,
+    ) -> Memory:
+        """
+        Restore a previous version of a memory.
+
+        The history is not rewritten. Instead, the
+        current memory is updated with the historical
+        content, which creates a new version.
+
+        Example:
+
+            Version 1: "I prefer Python."
+            Version 2: "I prefer Rust."
+
+            restore version 1
+
+            Version 3: "I prefer Python."
+        """
+
+        if version <= 0:
+            raise ValueError(
+                "version must be greater than zero."
+            )
+
+        if self.history_store is None:
+            raise RuntimeError(
+                "Memory history is not configured."
+            )
+
+        existing_memory = next(
+            (
+                memory
+                for memory in self.store.get_all()
+                if memory.id == memory_id
+            ),
+            None,
+        )
+
+        if existing_memory is None:
+            raise ValueError(
+                f"Memory '{memory_id}' was not found."
+            )
+
+        historical_version = next(
+            (
+                item
+                for item in self.history_store.get_history(
+                    memory_id
+                )
+                if item.version == version
+            ),
+            None,
+        )
+
+        if historical_version is None:
+            raise ValueError(
+                f"Version {version} was not found "
+                f"for memory '{memory_id}'."
+            )
+
+        return self.update_memory(
+            memory_id=memory_id,
+            content=historical_version.content,
         )
 
     # --------------------------------------------------
