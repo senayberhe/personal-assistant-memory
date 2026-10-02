@@ -1,5 +1,8 @@
 from typing import Protocol
 
+from assistant.memory_candidate import (
+    MemoryCandidate,
+)
 from assistant.memory_model import Memory
 from assistant.memory_resolution_result import (
     MemoryResolutionResult,
@@ -8,15 +11,13 @@ from assistant.memory_resolution_result import (
 
 class MemoryResolverProtocol(Protocol):
     """
-    Contract for memory relationship resolvers.
-
-    Both the rule-based MemoryResolver and the
-    AIMemoryResolver satisfy it.
+    Common interface for all memory resolvers.
     """
 
     def resolve(
         self,
         new_content: str,
-        existing_memory: Memory | None,
+        existing_memory: Memory | None = None,
+        candidates: list[MemoryCandidate] | None = None,
     ) -> MemoryResolutionResult:
         ...

@@ -63,3 +63,44 @@ def test_factory_wires_history_and_health_checks(tmp_path):
 
     assert results["memory"].healthy
 
+
+def test_factory_uses_ai_memory_resolver(tmp_path):
+    from assistant.ai_memory_resolver import AIMemoryResolver
+    from assistant.chroma_memory_candidate_retriever import (
+        ChromaMemoryCandidateRetriever,
+    )
+    from assistant.memory_confirmation import ConsoleMemoryConfirmation
+    from assistant.memory_policy import MemoryPolicy
+    from assistant.memory_resolver import MemoryResolver
+    from assistant.resilient_memory_resolver import ResilientMemoryResolver
+
+    settings = Settings(
+        openai_api_key="test-key",
+        model="test-model",
+        environment="testing",
+        log_level="WARNING",
+        api_timeout=30,
+        tool_timeout=10,
+        max_agent_steps=10,
+        max_plan_steps=10,
+        speech_timeout=5,
+        phrase_time_limit=8,
+        ambient_noise_duration=1,
+        memory_directory=str(tmp_path),
+    )
+
+    application = ApplicationFactory(settings=settings).create()
+
+    manager = application.assistant.agent.memory_manager
+
+    assert isinstance(manager.resolver, ResilientMemoryResolver)
+    assert isinstance(manager.resolver.ai_resolver, AIMemoryResolver)
+    assert isinstance(manager.resolver.fallback_resolver, MemoryResolver)
+    assert isinstance(
+        manager.candidate_retriever,
+        ChromaMemoryCandidateRetriever,
+    )
+    assert manager.store.embedding_service is not None
+    assert isinstance(manager.policy, MemoryPolicy)
+    assert isinstance(manager.confirmation, ConsoleMemoryConfirmation)
+

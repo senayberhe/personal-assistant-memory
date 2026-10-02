@@ -1,6 +1,10 @@
 from assistant.agent import VoiceAgent
+from assistant.ai_memory_resolver import AIMemoryResolver
 from assistant.application import Application
 from assistant.assistant import VoiceAssistant
+from assistant.chroma_memory_candidate_retriever import (
+    ChromaMemoryCandidateRetriever,
+)
 from assistant.chroma_memory_history_store import (
     ChromaMemoryHistoryStore,
 )
@@ -14,10 +18,21 @@ from assistant.health import (
     HealthCheckResult,
     HealthChecker,
 )
+from assistant.memory_candidate_ranker import (
+    MemoryCandidateRanker,
+)
+from assistant.memory_confirmation import (
+    ConsoleMemoryConfirmation,
+)
 from assistant.memory_extractor import MemoryExtractor
 from assistant.memory_manager import MemoryManager
+from assistant.memory_policy import MemoryPolicy
+from assistant.memory_resolver import MemoryResolver
 from assistant.permissions import PermissionManager
 from assistant.registry import ToolRegistry
+from assistant.resilient_memory_resolver import (
+    ResilientMemoryResolver,
+)
 from assistant.security import SecurityPolicy
 from assistant.tools import (
     AssistantTools,
@@ -101,19 +116,15 @@ class ApplicationFactory:
         # Embeddings: the store and the retriever must use
         # the same service, or stored and query vectors
         # will have different sizes.
-        embedding_service = (
-            OpenAIEmbeddingService(
-                settings=self.settings
-            )
+        embedding_service = OpenAIEmbeddingService(
+            settings=self.settings
         )
 
         memory_store = ChromaMemoryStore(
             persist_directory=(
                 self.settings.memory_directory
             ),
-            collection_name=(
-                "assistant_memories"
-            ),
+            collection_name="assistant_memories",
             embedding_service=embedding_service,
         )
 
@@ -126,20 +137,43 @@ class ApplicationFactory:
             embedding_service=embedding_service,
         )
 
+        # Finds similar memories when a new memory is
+        # saved, then reranks them by importance/recency.
+        candidate_retriever = ChromaMemoryCandidateRetriever(
+            retriever=retriever
+        )
+
+        candidate_ranker = MemoryCandidateRanker()
+
         # --------------------------------------------------
         # Persistent memory history
         # --------------------------------------------------
 
-        history_store = (
-            ChromaMemoryHistoryStore(
-                persist_directory=(
-                    self.settings.memory_directory
-                ),
-                collection_name=(
-                    "assistant_memory_history"
-                ),
-            )
+        history_store = ChromaMemoryHistoryStore(
+            persist_directory=(
+                self.settings.memory_directory
+            ),
+            collection_name="assistant_memory_history",
         )
+
+        # --------------------------------------------------
+        # Memory conflict handling
+        # --------------------------------------------------
+
+        # The AI resolver decides how a new memory relates
+        # to the candidates. If OpenAI is unavailable or
+        # returns an invalid answer, the rule-based
+        # resolver is used instead.
+        memory_resolver = ResilientMemoryResolver(
+            ai_resolver=AIMemoryResolver(
+                settings=self.settings
+            ),
+            fallback_resolver=MemoryResolver(),
+        )
+
+        memory_policy = MemoryPolicy()
+
+        memory_confirmation = ConsoleMemoryConfirmation()
 
         # --------------------------------------------------
         # Memory manager
@@ -148,7 +182,12 @@ class ApplicationFactory:
         memory_manager = MemoryManager(
             store=memory_store,
             retriever=retriever,
+            resolver=memory_resolver,
             history_store=history_store,
+            policy=memory_policy,
+            confirmation=memory_confirmation,
+            candidate_retriever=candidate_retriever,
+            candidate_ranker=candidate_ranker,
         )
 
         # --------------------------------------------------

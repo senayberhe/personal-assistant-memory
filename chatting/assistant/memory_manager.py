@@ -1,11 +1,30 @@
 from datetime import datetime, timedelta
 from uuid import uuid4
 
+
+from assistant.memory_audit import (
+    MemoryAuditRecord,
+)
+
+from assistant.memory_audit_store import (
+    MemoryAuditStore,
+)
+
+
+from assistant.memory_candidate import (
+    MemoryCandidate,
+)
+from assistant.memory_candidate_retriever import (
+    MemoryCandidateRetriever,
+)
+from assistant.memory_candidate_ranker import (
+    MemoryCandidateRanker,
+)
+from assistant.memory_confirmation import (
+    MemoryConfirmation,
+)
 from assistant.memory_history import (
     MemoryVersion,
-)
-from assistant.memory_policy import (
-    MemoryPolicy,
 )
 from assistant.memory_lifecycle import (
     MemoryLifecycle,
@@ -13,6 +32,9 @@ from assistant.memory_lifecycle import (
 from assistant.memory_model import (
     Memory,
     validate_importance,
+)
+from assistant.memory_policy import (
+    MemoryPolicy,
 )
 from assistant.memory_ranking import (
     rank_memories,
@@ -24,28 +46,15 @@ from assistant.memory_resolver_protocol import (
     MemoryResolverProtocol,
 )
 
-from assistant.memory_confirmation import (
-    ConsoleMemoryConfirmation,
-    MemoryConfirmation,
-)
-
 
 class MemoryManager:
     """
-    Manages the lifecycle of long-term memories.
+    Coordinates memory creation, retrieval, resolution,
+    updates, history, rollback, and deletion.
 
-    Responsibilities:
-
-    - Create memories
-    - Store memories
-    - Retrieve memories
-    - Rank memories
-    - Update memories
-    - Resolve memory conflicts
-    - Maintain memory versions
-    - Read memory history
-    - Forget memories
-    - Clean up expired memories
+    The MemoryManager owns the memory workflow but
+    delegates storage, retrieval, resolution, policy,
+    and confirmation to specialized components.
     """
 
     def __init__(
@@ -56,9 +65,15 @@ class MemoryManager:
         history_store=None,
         policy: MemoryPolicy | None = None,
         confirmation: MemoryConfirmation | None = None,
+        candidate_retriever: (
+            MemoryCandidateRetriever | None
+        ) = None,
+        candidate_ranker: (
+            MemoryCandidateRanker | None
+        ) = None,
+        audit_store: MemoryAuditStore | None = None,
     ):
         self.store = store
-
         self.retriever = retriever
 
         self.resolver = (
@@ -74,15 +89,19 @@ class MemoryManager:
             if policy is not None
             else MemoryPolicy()
         )
-        self.confirmation = (
-            confirmation
-            if confirmation is not None
-            else ConsoleMemoryConfirmation()
+
+        self.confirmation = confirmation
+
+        self.candidate_retriever = (
+            candidate_retriever
         )
 
-    # --------------------------------------------------
-    # CREATE
-    # --------------------------------------------------
+        self.candidate_ranker = (
+            candidate_ranker
+            if candidate_ranker is not None
+            else MemoryCandidateRanker()
+        )
+        self.audit_store = audit_store
 
     def remember(
         self,
@@ -94,11 +113,6 @@ class MemoryManager:
         ttl_days: float | None = None,
         memory_key: str | None = None,
     ) -> Memory:
-        """
-        Create and store a new memory.
-
-        A new memory always starts at version 1.
-        """
 
         if not content.strip():
             raise ValueError(
@@ -110,16 +124,14 @@ class MemoryManager:
         )
 
         if memory_key is not None:
-            memory_key = memory_key.strip()
-
-            if not memory_key:
-                memory_key = None
+            memory_key = memory_key.strip() or None
 
         created_at = datetime.now()
 
         expires_at = None
 
         if ttl_days is not None:
+
             if ttl_days <= 0:
                 raise ValueError(
                     "ttl_days must be greater than zero."
@@ -147,17 +159,10 @@ class MemoryManager:
 
         return memory
 
-    # --------------------------------------------------
-    # FIND BY KEY
-    # --------------------------------------------------
-
     def find_by_key(
         self,
         memory_key: str,
     ) -> list[Memory]:
-        """
-        Find memories using their stable memory key.
-        """
 
         if not memory_key.strip():
             return []
@@ -166,9 +171,49 @@ class MemoryManager:
             memory_key
         )
 
-    # --------------------------------------------------
-    # UPDATE
-    # --------------------------------------------------
+    def retrieve_candidates(
+        self,
+        query: str,
+        candidate_limit: int = 20,
+        top_k: int = 5,
+    ):
+        """
+        Retrieve and rerank memory candidates.
+
+        Stage 1:
+            Retrieve candidate_limit memories.
+
+        Stage 2:
+            Rerank candidates.
+
+        Stage 3:
+            Return top_k candidates.
+        """
+
+        if self.candidate_retriever is None:
+            return []
+
+        if not query.strip():
+            return []
+
+        if candidate_limit <= 0:
+            return []
+
+        if top_k <= 0:
+            return []
+
+        candidates = (
+            self.candidate_retriever
+            .retrieve_candidates(
+                query=query,
+                candidate_limit=candidate_limit,
+            )
+        )
+
+        return self.candidate_ranker.rank(
+            candidates,
+            top_k=top_k,
+        )
 
     def update_memory(
         self,
@@ -177,25 +222,6 @@ class MemoryManager:
         importance: float | None = None,
         metadata: dict | None = None,
     ) -> Memory:
-        """
-        Update an existing memory.
-
-        Before modifying the current memory,
-        its existing version is saved to the
-        history store.
-
-        Example:
-
-            Version 1
-            "I prefer Python."
-
-            update
-
-            Version 2
-            "I prefer Rust."
-
-        The history will retain Version 1.
-        """
 
         memories = self.store.get_all()
 
@@ -213,11 +239,8 @@ class MemoryManager:
                 f"Memory '{memory_id}' was not found."
             )
 
-        # --------------------------------------------------
         # Validate first, so a rejected update
-        # leaves no history entry behind
-        # --------------------------------------------------
-
+        # leaves no history entry behind.
         if content is not None and not content.strip():
             raise ValueError(
                 "Memory content cannot be empty."
@@ -226,18 +249,13 @@ class MemoryManager:
         if importance is not None:
             validate_importance(importance)
 
-        # --------------------------------------------------
-        # Save current version to history
-        # --------------------------------------------------
-
         if self.history_store is not None:
+
             history_version = MemoryVersion(
                 memory_id=existing_memory.id,
                 version=existing_memory.version,
                 content=existing_memory.content,
-                created_at=(
-                    existing_memory.created_at
-                ),
+                created_at=existing_memory.created_at,
                 recorded_at=datetime.now(),
                 memory_key=(
                     existing_memory.memory_key
@@ -248,11 +266,8 @@ class MemoryManager:
                 history_version
             )
 
-        # --------------------------------------------------
-        # Update content
-        # --------------------------------------------------
-
         if content is not None:
+
             content = content.strip()
 
             if not content:
@@ -262,33 +277,18 @@ class MemoryManager:
 
             existing_memory.content = content
 
-        # --------------------------------------------------
-        # Update importance
-        # --------------------------------------------------
-
         if importance is not None:
+
             existing_memory.importance = (
                 validate_importance(
                     importance
                 )
             )
 
-        # --------------------------------------------------
-        # Update metadata
-        # --------------------------------------------------
-
         if metadata is not None:
             existing_memory.metadata = metadata
 
-        # --------------------------------------------------
-        # Increment version
-        # --------------------------------------------------
-
         existing_memory.version += 1
-
-        # --------------------------------------------------
-        # Persist updated memory
-        # --------------------------------------------------
 
         self.store.save(
             existing_memory
@@ -296,51 +296,80 @@ class MemoryManager:
 
         return existing_memory
 
-    # --------------------------------------------------
-    # UPSERT
-    # --------------------------------------------------
-
     def upsert(
         self,
         content: str,
-        memory_key: str,
+        memory_key: str | None = None,
         memory_type: str = "general",
         importance: float = 0.5,
         source: str = "conversation",
         metadata: dict | None = None,
         ttl_days: float | None = None,
+        candidate_limit: int = 20,
+        top_k: int = 5,
     ) -> Memory:
-        """
-        Create, update, or ignore a memory.
 
-        1. The resolver decides how the new content
-           relates to the existing memory.
-        2. The policy decides what to do about it.
-        3. Risky updates ask for confirmation first.
-        """
+        if not content.strip():
+            raise ValueError(
+                "Memory content cannot be empty."
+            )
 
-        if not memory_key.strip():
+        # memory_key is optional, but an explicitly
+        # blank key is almost certainly a mistake.
+        if memory_key is not None and not memory_key.strip():
             raise ValueError(
                 "memory_key cannot be empty."
             )
 
-        existing_memories = self.find_by_key(
-            memory_key
-        )
-
         existing_memory = None
 
-        if existing_memories:
-            existing_memory = existing_memories[0]
+        if memory_key:
+            memories = self.find_by_key(
+                memory_key
+            )
 
-        result = self.resolver.resolve(
-            new_content=content,
-            existing_memory=existing_memory,
+            if memories:
+                existing_memory = memories[0]
+
+        candidates = self.retrieve_candidates(
+            query=content,
+            candidate_limit=candidate_limit,
+            top_k=top_k,
+        )
+
+        # A memory with the same key is the strongest
+        # candidate even if semantic search ranked it
+        # low or missed it, so make sure it comes first.
+        if existing_memory is not None:
+            candidates = [
+                MemoryCandidate(
+                    memory=existing_memory,
+                    similarity=1.0,
+                    ranking_score=1.0,
+                ),
+                *(
+                    candidate
+                    for candidate in candidates
+                    if candidate.memory.id
+                    != existing_memory.id
+                ),
+            ]
+
+        resolution_result = (
+            self.resolver.resolve(
+                new_content=content,
+                existing_memory=existing_memory,
+                candidates=candidates,
+            )
         )
 
         decision = self.policy.decide(
-            result.resolution,
-            confidence=result.confidence,
+            resolution=(
+                resolution_result.resolution
+            ),
+            confidence=(
+                resolution_result.confidence
+            ),
         )
 
         if not decision.allowed:
@@ -348,7 +377,31 @@ class MemoryManager:
                 decision.reason
             )
 
-        if decision.action == "create":
+        if (
+            decision.action == "ignore"
+        ):
+            target_id = (
+                resolution_result.target_memory_id
+            )
+
+            if target_id:
+                memories = self.store.get_all()
+
+                existing = next(
+                    (
+                        memory
+                        for memory in memories
+                        if memory.id == target_id
+                    ),
+                    None,
+                )
+
+                if existing is not None:
+                    return existing
+
+            if existing_memory is not None:
+                return existing_memory
+
             return self.remember(
                 content=content,
                 memory_type=memory_type,
@@ -359,51 +412,92 @@ class MemoryManager:
                 memory_key=memory_key,
             )
 
-        if existing_memory is None:
-            raise RuntimeError(
-                f"Policy requested '{decision.action}' "
-                "without an existing memory."
+        if (
+            decision.action == "create"
+        ):
+            return self.remember(
+                content=content,
+                memory_type=memory_type,
+                importance=importance,
+                source=source,
+                metadata=metadata,
+                ttl_days=ttl_days,
+                memory_key=memory_key,
             )
 
-        if decision.action == "ignore":
-            return existing_memory
+        if (
+            decision.action == "update"
+        ):
+            target_memory_id = (
+                resolution_result.target_memory_id
+            )
 
-        if decision.action == "update":
-
-            if decision.requires_confirmation:
-
-                if self.confirmation is None:
-                    raise PermissionError(
-                        "Memory update requires "
-                        "confirmation."
-                    )
-
-                confirmed = self.confirmation.confirm(
-                    "The new memory conflicts with an "
-                    "existing memory. "
-                    f'Existing: "{existing_memory.content}" '
-                    f'New: "{content.strip()}". '
-                    "Should I update the existing memory?"
+            if target_memory_id is None:
+                raise ValueError(
+                    "Memory update requires a "
+                    "target memory."
                 )
 
-                if not confirmed:
-                    return existing_memory
+            memories = self.store.get_all()
+
+            target_memory = next(
+                (
+                    memory
+                    for memory in memories
+                    if memory.id == target_memory_id
+                ),
+                None,
+            )
+
+            if target_memory is None:
+                raise ValueError(
+                    f"Target memory "
+                    f"'{target_memory_id}' "
+                    "was not found."
+                )
+
+            if (
+                decision.requires_confirmation
+            ):
+
+                if self.confirmation is None:
+                    raise RuntimeError(
+                        "Memory confirmation is "
+                        "required but not configured."
+                    )
+
+                confirmation_message = (
+                    "The new memory conflicts with an "
+                    "existing memory.\n\n"
+                    f'Existing: "{target_memory.content}"\n'
+                    f'New: "{content.strip()}"\n'
+                    f"Reason: "
+                    f"{resolution_result.reason}\n"
+                    f"Confidence: "
+                    f"{resolution_result.confidence:.0%}\n\n"
+                    "Should I update the memory?"
+                )
+
+                approved = (
+                    self.confirmation.confirm(
+                        confirmation_message
+                    )
+                )
+
+                if not approved:
+                    return target_memory
 
             return self.update_memory(
-                memory_id=existing_memory.id,
+                memory_id=target_memory.id,
                 content=content,
                 importance=importance,
                 metadata=metadata,
             )
 
         raise RuntimeError(
-            f"Unsupported policy action: "
+            "Unsupported memory policy action: "
             f"{decision.action}"
         )
-
-    # --------------------------------------------------
-    # RECALL
-    # --------------------------------------------------
 
     def recall(
         self,
@@ -413,6 +507,9 @@ class MemoryManager:
     ) -> list[Memory]:
         """
         Retrieve relevant memories that have not expired.
+
+        retriever.retrieve() already returns Memory
+        objects (not scored results).
         """
 
         memories = self.retriever.retrieve(
@@ -450,10 +547,6 @@ class MemoryManager:
             )
         ]
 
-    # --------------------------------------------------
-    # RANKED RECALL
-    # --------------------------------------------------
-
     def recall_ranked(
         self,
         query: str,
@@ -461,11 +554,8 @@ class MemoryManager:
         memory_type: str | None = None,
     ):
         """
-        Retrieve and rank memories using:
-
-        - semantic similarity
-        - importance
-        - recency
+        Retrieve and rank memories by similarity,
+        importance, and recency.
 
         Extra candidates are fetched by similarity so
         that importance and recency can reorder them.
@@ -481,20 +571,10 @@ class MemoryManager:
             results
         )[:top_k]
 
-    # --------------------------------------------------
-    # HISTORY
-    # --------------------------------------------------
-
     def get_history(
         self,
         memory_id: str,
-    ) -> list[MemoryVersion]:
-        """
-        Return all historical versions of a memory.
-
-        If no history store is configured,
-        an empty list is returned.
-        """
+    ):
 
         if self.history_store is None:
             return []
@@ -503,31 +583,11 @@ class MemoryManager:
             memory_id
         )
 
-    # --------------------------------------------------
-    # ROLLBACK
-    # --------------------------------------------------
-
     def restore_memory_version(
         self,
         memory_id: str,
         version: int,
     ) -> Memory:
-        """
-        Restore a previous version of a memory.
-
-        The history is not rewritten. Instead, the
-        current memory is updated with the historical
-        content, which creates a new version.
-
-        Example:
-
-            Version 1: "I prefer Python."
-            Version 2: "I prefer Rust."
-
-            restore version 1
-
-            Version 3: "I prefer Python."
-        """
 
         if version <= 0:
             raise ValueError(
@@ -539,10 +599,12 @@ class MemoryManager:
                 "Memory history is not configured."
             )
 
+        memories = self.store.get_all()
+
         existing_memory = next(
             (
                 memory
-                for memory in self.store.get_all()
+                for memory in memories
                 if memory.id == memory_id
             ),
             None,
@@ -553,12 +615,14 @@ class MemoryManager:
                 f"Memory '{memory_id}' was not found."
             )
 
+        history = self.history_store.get_history(
+            memory_id
+        )
+
         historical_version = next(
             (
                 item
-                for item in self.history_store.get_history(
-                    memory_id
-                )
+                for item in history
                 if item.version == version
             ),
             None,
@@ -575,32 +639,16 @@ class MemoryManager:
             content=historical_version.content,
         )
 
-    # --------------------------------------------------
-    # FORGET
-    # --------------------------------------------------
-
     def forget(
         self,
         memory_id: str,
     ) -> None:
-        """
-        Permanently delete a memory by ID.
-        """
 
         self.store.delete(
             memory_id
         )
 
-    # --------------------------------------------------
-    # CLEANUP
-    # --------------------------------------------------
-
     def cleanup_expired(self) -> int:
-        """
-        Delete all expired memories.
-
-        Returns the number of memories deleted.
-        """
 
         memories = self.store.get_all()
 

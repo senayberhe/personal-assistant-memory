@@ -1,8 +1,9 @@
-from openai import OpenAI, OpenAIError
+from openai import OpenAI
 from pydantic import ValidationError
 
-from assistant.errors import ServiceError
-
+from assistant.memory_candidate import (
+    MemoryCandidate,
+)
 from assistant.memory_model import Memory
 from assistant.memory_resolution import (
     MemoryResolution,
@@ -10,8 +11,15 @@ from assistant.memory_resolution import (
 from assistant.memory_resolution_result import (
     MemoryResolutionResult,
 )
+from assistant.memory_resolution_context import (
+    MemoryResolutionContextBuilder,
+)
+from assistant.memory_resolution_prompt import (
+    MemoryResolutionPromptBuilder,
+)
 from assistant.memory_resolution_schema import (
     AIMemoryResolution,
+    AIResolution,
 )
 from config.settings import Settings
 
@@ -19,10 +27,10 @@ from config.settings import Settings
 class AIMemoryResolver:
     """
     Uses an OpenAI model to classify the relationship
-    between a new memory and an existing memory.
+    between a new memory and relevant existing
+    memory candidates.
 
-    The model returns structured data validated
-    by Pydantic.
+    The model returns structured Pydantic output.
 
     The resolver never modifies memory storage.
     """
@@ -30,19 +38,31 @@ class AIMemoryResolver:
     def __init__(
         self,
         settings: Settings,
+        context_builder: MemoryResolutionContextBuilder | None = None,
+        prompt_builder: MemoryResolutionPromptBuilder | None = None,
         client=None,
     ):
         self.client = client or OpenAI(
             api_key=settings.openai_api_key,
             timeout=settings.api_timeout,
         )
-
         self.model = settings.model
+        self.context_builder = (
+            context_builder
+            if context_builder is not None
+            else MemoryResolutionContextBuilder()
+        )
+        self.prompt_builder = (
+            prompt_builder
+            if prompt_builder is not None
+            else MemoryResolutionPromptBuilder()
+        )
 
     def resolve(
         self,
         new_content: str,
-        existing_memory: Memory | None,
+        existing_memory: Memory | None = None,
+        candidates: list[MemoryCandidate] | None = None,
     ) -> MemoryResolutionResult:
 
         if not new_content.strip():
@@ -50,32 +70,47 @@ class AIMemoryResolver:
                 "New memory content cannot be empty."
             )
 
-        if existing_memory is None:
+        if candidates is None:
+            candidates = []
+
+        if not candidates and existing_memory is not None:
+            candidates = [
+                MemoryCandidate(
+                    memory=existing_memory,
+                    similarity=1.0,
+                    ranking_score=1.0,
+                )
+            ]
+
+        if not candidates:
             return MemoryResolutionResult(
                 resolution=MemoryResolution.CREATE,
                 confidence=1.0,
                 reason=(
-                    "No existing memory was found."
+                    "No relevant existing memories "
+                    "were found."
                 ),
             )
 
-        prompt = self._build_prompt(
-            new_content=new_content,
-            existing_memory=existing_memory,
+        # The context builder limits how many candidates
+        # (and how much text) are sent to the model; the
+        # prompt builder marks memory content as data,
+        # not instructions.
+        context = self.context_builder.build(
+            candidates
         )
 
-        try:
-            response = self.client.responses.parse(
-                model=self.model,
-                instructions=self._instructions(),
-                input=prompt,
-                text_format=AIMemoryResolution,
-            )
-
-        except OpenAIError as error:
-            raise ServiceError(
-                "AI memory resolution failed."
-            ) from error
+        response = self.client.responses.parse(
+            model=self.model,
+            instructions=(
+                self.prompt_builder.build_instructions()
+            ),
+            input=self.prompt_builder.build_input(
+                new_content=new_content,
+                context=context,
+            ),
+            text_format=AIMemoryResolution,
+        )
 
         parsed = response.output_parsed
 
@@ -85,19 +120,14 @@ class AIMemoryResolver:
                 "a structured result."
             )
 
-        result = parsed.to_domain_result()
+        # Only candidates actually sent to the model
+        # are valid targets.
+        self._validate_target(
+            parsed=parsed,
+            candidates=context.candidates,
+        )
 
-        # CREATE means "no existing memory", but there is
-        # one here. Treat it as UNRELATED so the policy
-        # still creates a separate memory.
-        if result.resolution == MemoryResolution.CREATE:
-            return MemoryResolutionResult(
-                resolution=MemoryResolution.UNRELATED,
-                confidence=result.confidence,
-                reason=result.reason,
-            )
-
-        return result
+        return parsed.to_domain_result()
 
     @staticmethod
     def _parse_response(
@@ -124,68 +154,33 @@ class AIMemoryResolver:
         return parsed.to_domain_result()
 
     @staticmethod
-    def _instructions() -> str:
-        return """
-You are a memory relationship classifier.
+    def _validate_target(
+        parsed: AIMemoryResolution,
+        candidates: list[MemoryCandidate],
+    ) -> None:
 
-Compare the existing memory with the new memory.
+        candidate_ids = {
+            candidate.memory.id
+            for candidate in candidates
+        }
 
-Classify the relationship as one of:
+        if parsed.resolution == AIResolution.CREATE:
+            if parsed.target_memory_id is not None:
+                raise ValueError(
+                    "CREATE resolution must not "
+                    "specify a target memory."
+                )
+            return
 
-CREATE
-IGNORE
-UPDATE
-CONTRADICT
-UNRELATED
+        if parsed.target_memory_id is None:
+            raise ValueError(
+                "A target memory is required for "
+                f"{parsed.resolution.value}."
+            )
 
-Definitions:
-
-CREATE:
-There is no existing memory.
-
-IGNORE:
-The new memory contains essentially the
-same information as the existing memory.
-
-UPDATE:
-The new memory is related and provides a
-reasonable refinement or update.
-
-CONTRADICT:
-The new memory conflicts with the existing
-memory.
-
-UNRELATED:
-The new memory does not meaningfully relate
-to the existing memory.
-
-Important rules:
-
-1. Do not invent facts.
-2. Do not assume that learning something new
-   contradicts an existing preference.
-3. Do not assume that using two technologies
-   means the user stopped using the first one.
-4. Only classify CONTRADICT when the statements
-   genuinely conflict.
-5. Keep the reason short and factual.
-6. Confidence must reflect uncertainty.
-""".strip()
-
-    @staticmethod
-    def _build_prompt(
-        new_content: str,
-        existing_memory: Memory,
-    ) -> str:
-
-        return f"""
-Existing memory:
-
-{existing_memory.content}
-
-New memory:
-
-{new_content}
-
-Determine the relationship between them.
-""".strip()
+        if parsed.target_memory_id not in candidate_ids:
+            raise ValueError(
+                "AI returned a target memory ID "
+                "that was not present in the "
+                "candidate list."
+            )

@@ -1,3 +1,6 @@
+from assistant.memory_candidate import (
+    MemoryCandidate,
+)
 from assistant.memory_model import Memory
 from assistant.memory_resolution import (
     MemoryResolution,
@@ -9,27 +12,17 @@ from assistant.memory_resolution_result import (
 
 class MemoryResolver:
     """
-    Determines how a new memory relates to an
-    existing memory.
+    Rule-based memory resolver.
 
-    The resolver returns a structured result
-    containing:
-
-    - resolution
-    - confidence
-    - reason
-
-    This implementation is intentionally
-    rule-based.
-
-    A future AI resolver can implement the
-    same interface.
+    This resolver is deterministic and acts as the
+    fallback when the AI resolver is unavailable.
     """
 
     def resolve(
         self,
         new_content: str,
-        existing_memory: Memory | None,
+        existing_memory: Memory | None = None,
+        candidates: list[MemoryCandidate] | None = None,
     ) -> MemoryResolutionResult:
 
         if not new_content.strip():
@@ -37,21 +30,38 @@ class MemoryResolver:
                 "New memory content cannot be empty."
             )
 
-        if existing_memory is None:
+        if candidates is None:
+            candidates = []
+
+        if not candidates and existing_memory is not None:
+            candidates = [
+                MemoryCandidate(
+                    memory=existing_memory,
+                    similarity=1.0,
+                    ranking_score=1.0,
+                )
+            ]
+
+        if not candidates:
             return MemoryResolutionResult(
                 resolution=MemoryResolution.CREATE,
                 confidence=1.0,
                 reason=(
                     "No existing memory was found."
                 ),
+                target_memory_id=None,
             )
+
+        best_candidate = candidates[0]
+
+        existing = best_candidate.memory
 
         normalized_new = self._normalize(
             new_content
         )
 
         normalized_existing = self._normalize(
-            existing_memory.content
+            existing.content
         )
 
         if normalized_new == normalized_existing:
@@ -62,6 +72,7 @@ class MemoryResolver:
                     "The new memory is identical "
                     "to the existing memory."
                 ),
+                target_memory_id=existing.id,
             )
 
         if self._is_contradiction(
@@ -75,6 +86,7 @@ class MemoryResolver:
                     "The new memory directly "
                     "contradicts the existing memory."
                 ),
+                target_memory_id=existing.id,
             )
 
         if self._is_related(
@@ -88,6 +100,7 @@ class MemoryResolver:
                     "The new memory appears "
                     "related to the existing memory."
                 ),
+                target_memory_id=existing.id,
             )
 
         return MemoryResolutionResult(
@@ -97,10 +110,13 @@ class MemoryResolver:
                 "The new memory does not appear "
                 "related to the existing memory."
             ),
+            target_memory_id=None,
         )
 
     @staticmethod
-    def _normalize(text: str) -> str:
+    def _normalize(
+        text: str,
+    ) -> str:
         return " ".join(
             text.strip().lower().split()
         )

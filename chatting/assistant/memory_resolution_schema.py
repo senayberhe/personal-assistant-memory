@@ -12,11 +12,8 @@ from assistant.memory_resolution_result import (
 
 class AIResolution(str, Enum):
     """
-    Labels the AI model is allowed to return.
-
-    Using an enum (instead of a plain string) puts the
-    allowed values in the JSON schema sent to the model,
-    so it cannot answer with an unknown label.
+    Possible relationships between a new memory
+    and existing memory candidates.
     """
 
     CREATE = "CREATE"
@@ -28,15 +25,23 @@ class AIResolution(str, Enum):
 
 class AIMemoryResolution(BaseModel):
     """
-    Structured output expected from the AI
-    memory resolver.
+    Structured response returned by the AI resolver.
     """
 
     resolution: AIResolution = Field(
         description=(
-            "Memory relationship: CREATE, IGNORE, "
-            "UPDATE, CONTRADICT, or UNRELATED."
+            "Relationship between the new memory "
+            "and candidate memories."
         )
+    )
+
+    target_memory_id: str | None = Field(
+        default=None,
+        description=(
+            "ID of the existing memory affected "
+            "by the resolution. Null when no "
+            "existing memory should be modified."
+        ),
     )
 
     confidence: float = Field(
@@ -50,7 +55,7 @@ class AIMemoryResolution(BaseModel):
     reason: str = Field(
         min_length=1,
         description=(
-            "Short explanation for the classification."
+            "Short factual explanation."
         ),
     )
 
@@ -58,14 +63,19 @@ class AIMemoryResolution(BaseModel):
         self,
     ) -> MemoryResolutionResult:
         """
-        Convert the AI output into the result type
-        used by the rest of the memory system.
+        Convert the AI response into the application's
+        domain representation.
         """
 
         return MemoryResolutionResult(
+            # AI labels match the enum NAMES ("CREATE"),
+            # not its values ("create").
             resolution=MemoryResolution[
                 self.resolution.value
             ],
             confidence=self.confidence,
             reason=self.reason,
+            target_memory_id=(
+                self.target_memory_id
+            ),
         )
