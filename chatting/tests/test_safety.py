@@ -17,6 +17,20 @@ detector = SensitiveDataDetector()
         ("my ssn is 123-45-6789", "us_ssn"),
         ("card 4111 1111 1111 1111 exp 09/27", "payment_card"),
         ("card 4111-1111-1111-1111", "payment_card"),
+        ("stripe sk_live_abcdefghijklmnop1234", "stripe_key"),
+        ("AIzaSyA1234567890abcdefghijklmnopqrstuv", "google_api_key"),
+        ("xoxb-1234567890-abcdefghij", "slack_token"),
+        (
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N",
+            "jwt",
+        ),
+        ("postgres://admin:s3cret@db.example.com/app", "url_credentials"),
+        ("the password for the wifi is sunflower", "password"),
+        ("my passphrase: correct horse battery", "password"),
+        ("my api key is abc123def456ghi", "credential"),
+        ("token = 9f8e7d6c5b4a3210", "credential"),
+        ("IBAN DE89 3704 0044 0532 0130 00", "bank_account"),
+        ("GB82WEST12345698765432", "bank_account"),
         (
             "-----BEGIN RSA PRIVATE KEY-----\nMIIabc\n-----END RSA PRIVATE KEY-----",
             "private_key",
@@ -37,6 +51,11 @@ def test_detects_sensitive_data(text, kind):
         "The order number is 1234567890123",  # fails the Luhn check
         "I forgot my password yesterday.",  # mentions, but no value
         "Ask for the skeleton key.",
+        "My token is ready.",  # too short to be a credential
+        "The secret is to practice daily.",  # 'to' is not a secret
+        "Visit https://example.com/page",  # URL without credentials
+        "Meeting room DE12 is free.",  # not a valid IBAN
+        "I like python programming",
     ],
 )
 def test_ordinary_text_is_not_flagged(text):

@@ -30,6 +30,10 @@ from assistant.memory.retrieval.candidate_retriever import (
 )
 
 
+class MemoryApprovalDeclined(Exception):
+    """The user declined to save a memory (not an error)."""
+
+
 class MemoryManager:
     """
     Coordinates memory creation, retrieval, resolution, updates,
@@ -393,6 +397,7 @@ class MemoryManager:
         ttl_days: float | None = None,
         candidate_limit: int = 20,
         top_k: int = 5,
+        require_approval: bool = False,
     ) -> Memory:
         """
         Create, update, or ignore a memory.
@@ -401,6 +406,11 @@ class MemoryManager:
            candidates).
         2. The resolver decides how the new content relates to them.
         3. The policy decides what to do; risky updates are confirmed.
+
+        require_approval:
+            Ask the user before anything is written, even when the
+            policy would not. Duplicates (ignore) never ask. Raises
+            MemoryApprovalDeclined if the user says no to a new memory.
         """
 
         try:
@@ -423,7 +433,13 @@ class MemoryManager:
                 ttl_days=ttl_days,
                 candidate_limit=candidate_limit,
                 top_k=top_k,
+                require_approval=require_approval,
             )
+
+        except MemoryApprovalDeclined:
+            # Declining is the user's choice, not a failure; the
+            # decision event was already published.
+            raise
 
         except Exception as error:
             self._publish_failure("memory_upserted", "upsert", content, error)
@@ -440,6 +456,7 @@ class MemoryManager:
         ttl_days: float | None,
         candidate_limit: int,
         top_k: int,
+        require_approval: bool,
     ) -> Memory:
 
         keyed_memory = None
@@ -487,6 +504,21 @@ class MemoryManager:
             raise PermissionError(decision.reason)
 
         def create() -> Memory:
+            if require_approval and not self._ask(
+                "Save this to long-term memory?\n\n" f'"{content}"'
+            ):
+                self._publish(
+                    event_type="memory_upserted",
+                    action="create_declined",
+                    content=content,
+                    memory_id=None,
+                    resolution_result=result,
+                )
+
+                raise MemoryApprovalDeclined(
+                    "The user chose not to save this memory."
+                )
+
             memory = self._create(
                 content=content,
                 memory_type=memory_type,
@@ -524,7 +556,11 @@ class MemoryManager:
                     f"(target_memory_id={result.target_memory_id!r})."
                 )
 
-            if decision.requires_confirmation and not self._confirm_update(
+            # Policy-required confirmation already asks the user;
+            # otherwise ask only when approval is required.
+            needs_question = decision.requires_confirmation or require_approval
+
+            if needs_question and not self._confirm_update(
                 target, content, result
             ):
                 self._publish_decision(
@@ -581,12 +617,7 @@ class MemoryManager:
         result: MemoryResolutionResult,
     ) -> bool:
 
-        if self.confirmation is None:
-            raise RuntimeError(
-                "Memory confirmation is required but not configured."
-            )
-
-        return self.confirmation.confirm(
+        return self._ask(
             "The new memory conflicts with an existing memory.\n\n"
             f'Existing: "{target.content}"\n'
             f'New: "{content}"\n'
@@ -594,6 +625,18 @@ class MemoryManager:
             f"Confidence: {result.confidence:.0%}\n\n"
             "Should I update the memory?"
         )
+
+    def _ask(
+        self,
+        question: str,
+    ) -> bool:
+
+        if self.confirmation is None:
+            raise RuntimeError(
+                "Memory confirmation is required but not configured."
+            )
+
+        return self.confirmation.confirm(question)
 
     # --------------------------------------------------
     # History

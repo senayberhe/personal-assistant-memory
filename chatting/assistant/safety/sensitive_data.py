@@ -32,19 +32,45 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
             re.DOTALL,
         ),
     ),
+    # --- Provider keys with a recognisable format ---
     ("openai_api_key", re.compile(r"\bsk-[A-Za-z0-9_-]{20,}")),
+    ("stripe_key", re.compile(r"\b[sr]k_(?:live|test)_[A-Za-z0-9]{16,}")),
     ("aws_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("google_api_key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
     ("github_token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b")),
+    ("slack_token", re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{10,}")),
+    (
+        "jwt",
+        re.compile(
+            r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"
+        ),
+    ),
     (
         "bearer_token",
         re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/-]{20,}=*"),
     ),
     (
+        "url_credentials",
+        # https://user:secret@host
+        re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s:/@]+:[^\s@/]+@", re.I),
+    ),
+    # --- Secrets introduced by a keyword ---
+    (
         "password",
-        # "my password is hunter2", "password: hunter2", "pin = 1234"
+        # "my password is hunter2", "password: hunter2", "pin = 1234",
+        # "the password for the wifi is sunflower"
         re.compile(
-            r"(?i)\b(?:password|passcode|passwd|pwd|pin)\b"
+            r"(?i)\b(?:password|passcode|passphrase|passwd|pwd|pin)\b"
+            r"(?:\s+(?:for|to|of|on)\s+(?:the\s+|my\s+)?\S+)?"
             r"\s*(?:is|:|=)\s*\S+"
+        ),
+    ),
+    (
+        "credential",
+        # "my api key is abc123...", "token: ...", "secret = ..."
+        re.compile(
+            r"(?i)\b(?:api[ _-]?key|access[ _-]?key|secret(?:[ _-]?key)?"
+            r"|auth[ _-]?token|token)\b\s*(?:is|:|=)\s*\S{8,}"
         ),
     ),
     ("us_ssn", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
@@ -52,6 +78,24 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 
 # 13-19 digits, optionally separated by single spaces or dashes.
 _CARD_CANDIDATE = re.compile(r"\b(?:\d[ -]?){12,18}\d\b")
+
+# Country code, 2 check digits, then 11-30 letters/digits (spaces
+# allowed in groups of four, as IBANs are usually written).
+_IBAN_CANDIDATE = re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{1,4}){3,8}\b")
+
+
+def _is_valid_iban(text: str) -> bool:
+    """ISO 13616 mod-97 check, so random codes are not flagged."""
+
+    iban = text.replace(" ", "")
+
+    if not 15 <= len(iban) <= 34:
+        return False
+
+    rearranged = iban[4:] + iban[:4]
+    digits = "".join(str(int(character, 36)) for character in rearranged)
+
+    return int(digits) % 97 == 1
 
 
 def _passes_luhn(digits: str) -> bool:
@@ -95,6 +139,16 @@ class SensitiveDataDetector:
                 findings.append(
                     SensitiveFinding(
                         "payment_card",
+                        match.start(),
+                        match.end(),
+                    )
+                )
+
+        for match in _IBAN_CANDIDATE.finditer(text):
+            if _is_valid_iban(match.group()):
+                findings.append(
+                    SensitiveFinding(
+                        "bank_account",
                         match.start(),
                         match.end(),
                     )

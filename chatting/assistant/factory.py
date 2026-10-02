@@ -104,6 +104,7 @@ class ApplicationFactory:
             instructions=(
                 TEXT_INSTRUCTIONS if interface == "text" else VOICE_INSTRUCTIONS
             ),
+            require_memory_approval=self.settings.memory_require_approval,
         )
 
         checks = [lambda: self._check_memory_store(memory.store)]

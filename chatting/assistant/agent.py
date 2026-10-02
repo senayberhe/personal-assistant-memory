@@ -16,8 +16,9 @@ from assistant.errors import AgentError, PermissionDeniedError, ToolError
 from assistant.memory import ConversationMemory
 from assistant.memory.context import format_memory_context
 from assistant.memory.guard import SensitiveMemoryError
+from assistant.memory.manager import MemoryApprovalDeclined
 from assistant.observability import measure_time
-from assistant.safety import clean_text
+from assistant.safety import SensitiveDataDetector, clean_text
 from config.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -67,11 +68,15 @@ class VoiceAgent:
         conversation: ConversationMemory | None = None,
         instructions: str = VOICE_INSTRUCTIONS,
         on_tool_call: ToolCallListener | None = None,
+        require_memory_approval: bool = False,
+        detector: SensitiveDataDetector | None = None,
     ):
         """
         on_tool_call:
             Optional callback(tool_name, arguments), called before
             each tool runs. The text UI uses it to show activity.
+        require_memory_approval:
+            Ask the user before saving automatically detected facts.
         """
 
         self.executor = executor
@@ -81,6 +86,8 @@ class VoiceAgent:
         self.memory_extractor = memory_extractor
         self.instructions = instructions
         self.on_tool_call = on_tool_call
+        self.require_memory_approval = require_memory_approval
+        self.detector = detector or SensitiveDataDetector()
 
         self.client = client or OpenAI(
             api_key=settings.openai_api_key,
@@ -107,15 +114,26 @@ class VoiceAgent:
 
         notices = self._remember(text)
 
+        # Detected secrets never leave this machine: the model and
+        # the conversation history only ever see [REDACTED].
+        safe_text = self.detector.redact(text)
+
+        if safe_text != text:
+            notices.append(
+                "Note: sensitive information in the user's message was "
+                "replaced with [REDACTED] before it reached you. Do not "
+                "ask the user to repeat it."
+            )
+
         input_items: list = [
             {
                 "role": "developer",
-                "content": self._build_instructions(text, notices),
+                "content": self._build_instructions(safe_text, notices),
             },
             *self.conversation.get_messages(),
             {
                 "role": "user",
-                "content": text,
+                "content": safe_text,
             },
         ]
 
@@ -132,7 +150,7 @@ class VoiceAgent:
             if not function_calls:
                 reply = response.output_text.strip() or "Done."
 
-                self.conversation.add_user_message(text)
+                self.conversation.add_user_message(safe_text)
                 self.conversation.add_assistant_message(reply)
 
                 return reply
@@ -273,6 +291,13 @@ class VoiceAgent:
                     content=item["content"],
                     memory_type=item["memory_type"],
                     source="conversation",
+                    require_approval=self.require_memory_approval,
+                )
+
+            except MemoryApprovalDeclined:
+                notices.append(
+                    "Note: the user chose not to save this to long-term "
+                    "memory. Do not say that you will remember it."
                 )
 
             except SensitiveMemoryError as error:

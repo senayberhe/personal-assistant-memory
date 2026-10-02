@@ -82,9 +82,19 @@ Saving a memory (`MemoryManager.upsert`) runs a small pipeline:
 
 ## Safety
 
-- **Secrets are never stored.** API keys, passwords, card numbers,
-  SSNs, and private keys are rejected before reaching memory or the AI
-  resolver, and the assistant tells you it did not save them.
+Safety comes first, by design:
+
+- **Nothing is saved without your approval.** Facts the assistant
+  picks up from conversation are only stored after you say yes
+  (`MEMORY_REQUIRE_APPROVAL=true`, the default). This holds even for
+  a secret the detector does not recognise.
+- **Detected secrets never leave your computer.** API keys (OpenAI,
+  Stripe, AWS, Google, GitHub, Slack), passwords, tokens, JWTs, card
+  numbers, IBANs, SSNs, private keys, and passwords in URLs are
+  replaced with `[REDACTED]` before your message is sent to OpenAI.
+- **Secrets are never stored.** They are rejected before reaching
+  memory or the AI resolver, and the assistant tells you it did not
+  save them.
 - **Logs and the audit trail are redacted**, including tracebacks.
 - **Memories are treated as data, not instructions**, so a stored
   "ignore your rules…" cannot steer the model.
@@ -94,8 +104,15 @@ Saving a memory (`MemoryManager.upsert`) runs a small pipeline:
   limits on arguments and results.
 - **URLs** are restricted to `http`/`https`.
 
-Detection is pattern based. It catches common, well-formed secrets,
-but it is not a guarantee: avoid typing secrets into the chat.
+These promises are enforced by `tests/test_safety_contract.py`, which
+sends every kind of secret through the real agent and memory system
+and checks that none of it reaches memory, OpenAI, the audit log, or
+the logs. If a change weakens safety, that test fails.
+
+What cannot be promised: detection is pattern based, so a secret with
+no recognisable shape (for example "my wifi code is sunflower",
+without the word "password") is not detected. Approval before saving
+is what protects you there. Still, avoid typing secrets into the chat.
 
 ## Project layout
 

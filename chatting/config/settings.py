@@ -13,6 +13,20 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
 
+def parse_bool(value: str) -> bool:
+    """Parse a true/false environment value."""
+
+    normalized = value.strip().lower()
+
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+
+    raise ValueError(f"Not a boolean: {value!r}")
+
+
 def resolve_project_path(path: str) -> str:
     """Make a relative path absolute, relative to PROJECT_ROOT."""
 
@@ -45,6 +59,10 @@ class Settings:
     embedding_model: str = "text-embedding-3-small"
 
     memory_directory: str = "data/memory"
+
+    # Safety first: ask before any automatically detected fact
+    # is written to long-term memory.
+    memory_require_approval: bool = True
 
     def validate(self) -> None:
         if not self.openai_api_key:
@@ -162,6 +180,12 @@ class Settings:
                     os.getenv(
                         "MEMORY_DIRECTORY",
                         "data/memory",
+                    )
+                ),
+                memory_require_approval=parse_bool(
+                    os.getenv(
+                        "MEMORY_REQUIRE_APPROVAL",
+                        "true",
                     )
                 ),
             )
