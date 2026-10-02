@@ -17,11 +17,17 @@ class MemoryMetrics:
         self,
         action: str,
         success: bool,
+        resolution: str | None = None,
     ) -> None:
 
         if not success:
             self.failed += 1
             return
+
+        # A contradiction is applied as an update, so it is
+        # counted both as "updated" and as "contradicted".
+        if resolution == "contradict":
+            self.contradicted += 1
 
         if action == "create":
             self.created += 1

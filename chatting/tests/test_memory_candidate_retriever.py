@@ -6,8 +6,8 @@ from assistant.memory.retrieval.base import RetrievedMemory
 from assistant.memory.retrieval.candidate import (
     MemoryCandidate,
 )
-from assistant.memory.retrieval.chroma_candidate_retriever import (
-    ChromaMemoryCandidateRetriever,
+from assistant.memory.retrieval.scored_candidate_retriever import (
+    ScoredCandidateRetriever,
 )
 
 
@@ -29,7 +29,7 @@ def test_retrieve_candidates():
     ]
 
     candidate_retriever = (
-        ChromaMemoryCandidateRetriever(
+        ScoredCandidateRetriever(
             retriever=retriever
         )
     )
@@ -62,7 +62,7 @@ def test_empty_query_returns_empty_list():
     retriever = MagicMock()
 
     candidate_retriever = (
-        ChromaMemoryCandidateRetriever(
+        ScoredCandidateRetriever(
             retriever=retriever
         )
     )
@@ -84,7 +84,7 @@ def test_invalid_candidate_limit_returns_empty_list():
     retriever = MagicMock()
 
     candidate_retriever = (
-        ChromaMemoryCandidateRetriever(
+        ScoredCandidateRetriever(
             retriever=retriever
         )
     )

@@ -35,13 +35,13 @@ def test_factory_wires_history_and_health_checks(settings, tmp_path):
 
 
 def test_factory_uses_ai_memory_resolver(settings):
-    from assistant.memory.confirmation import ConsoleMemoryConfirmation
+    from assistant.memory.confirmation import CallbackMemoryConfirmation
     from assistant.memory.policy import MemoryPolicy
     from assistant.memory.resolution.ai import AIMemoryResolver
     from assistant.memory.resolution.resilient import ResilientMemoryResolver
     from assistant.memory.resolution.rules import MemoryResolver
-    from assistant.memory.retrieval.chroma_candidate_retriever import (
-        ChromaMemoryCandidateRetriever,
+    from assistant.memory.retrieval.scored_candidate_retriever import (
+        ScoredCandidateRetriever,
     )
 
 
@@ -54,9 +54,46 @@ def test_factory_uses_ai_memory_resolver(settings):
     assert isinstance(manager.resolver.fallback_resolver, MemoryResolver)
     assert isinstance(
         manager.candidate_retriever,
-        ChromaMemoryCandidateRetriever,
+        ScoredCandidateRetriever,
     )
     assert manager.store.embedding_service is not None
     assert isinstance(manager.policy, MemoryPolicy)
-    assert isinstance(manager.confirmation, ConsoleMemoryConfirmation)
+    assert isinstance(manager.confirmation, CallbackMemoryConfirmation)
+
+
+def test_text_interface_builds_chat_without_microphone(settings):
+    from io import StringIO
+
+    from rich.console import Console
+
+    from assistant.agent import TEXT_INSTRUCTIONS
+    from assistant.interfaces.text_chat import TextChat
+
+    console = Console(file=StringIO())
+
+    application = ApplicationFactory(settings=settings).create(
+        interface="text",
+        console=console,
+    )
+
+    assert isinstance(application.assistant, TextChat)
+    assert application.assistant.agent.instructions == TEXT_INSTRUCTIONS
+
+    # Only the memory check: text mode must not need a microphone.
+    names = [result.name for result in application.health_checker.run()]
+    assert names == ["memory"]
+
+
+def test_safety_features_are_wired(settings):
+    application = ApplicationFactory(settings=settings).create()
+
+    agent = application.assistant.agent
+    executor = agent.executor
+
+    assert executor.timeout_seconds == settings.tool_timeout
+    assert executor.rate_limiter is not None
+    assert agent.memory_manager.content_guard is not None
+    assert len(agent.memory_manager.event_publisher.listeners) == 3
+
+    application.shutdown()
 

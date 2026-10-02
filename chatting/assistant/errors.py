@@ -36,3 +36,10 @@ class ServiceError(
     AssistantError
 ):
     """A service failed."""
+
+
+class StartupError(
+    AssistantError,
+    RuntimeError,
+):
+    """A startup health check failed (e.g. no microphone)."""

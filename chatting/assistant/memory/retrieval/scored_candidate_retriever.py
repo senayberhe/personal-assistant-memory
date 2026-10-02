@@ -1,21 +1,22 @@
+from assistant.memory.retrieval.base import Retriever
 from assistant.memory.retrieval.candidate import MemoryCandidate
 from assistant.memory.retrieval.candidate_retriever import (
     MemoryCandidateRetriever,
 )
-from assistant.memory.retrieval.chroma import ChromaRetriever
 
 
-class ChromaMemoryCandidateRetriever(
+class ScoredCandidateRetriever(
     MemoryCandidateRetriever
 ):
     """
-    Retrieves semantic memory candidates using
-    the existing Chroma retriever.
+    Turns any Retriever's scored results into memory candidates.
+
+    Works with the Chroma and the in-memory retriever alike.
     """
 
     def __init__(
         self,
-        retriever: ChromaRetriever,
+        retriever: Retriever,
     ):
         self.retriever = retriever
 

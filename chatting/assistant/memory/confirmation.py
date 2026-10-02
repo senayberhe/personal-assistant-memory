@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 
 
 class MemoryConfirmation(ABC):
@@ -26,3 +27,24 @@ class ConsoleMemoryConfirmation(MemoryConfirmation):
             "y",
             "yes",
         }
+
+
+class CallbackMemoryConfirmation(MemoryConfirmation):
+    """
+    Adapts any `confirm(question) -> bool` function.
+
+    Lets the memory system reuse the UI's own yes/no prompt
+    (for example the rich text chat) instead of input().
+    """
+
+    def __init__(
+        self,
+        confirm: Callable[[str], bool],
+    ):
+        self._confirm = confirm
+
+    def confirm(
+        self,
+        message: str,
+    ) -> bool:
+        return self._confirm(message)

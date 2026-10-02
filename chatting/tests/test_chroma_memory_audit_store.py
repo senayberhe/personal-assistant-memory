@@ -126,3 +126,15 @@ def test_unknown_memory_returns_empty(
     )
 
     assert records == []
+
+def test_reason_is_persisted(tmp_path):
+    store = ChromaMemoryAuditStore(
+        persist_directory=str(tmp_path),
+        collection_name="test_audit_reason",
+    )
+
+    store.save(create_record("audit-1"))
+
+    [record] = store.get_all()
+
+    assert record.reason == "The new memory is related."

@@ -25,12 +25,15 @@ class ChromaMemoryAuditStore(
         collection_name: str = "assistant_memory_audit",
     ):
         self.client = chromadb.PersistentClient(
-            path=persist_directory
+            path=str(persist_directory)
         )
 
+        # Audit records are looked up by ID and memory ID, never
+        # by meaning, so no embedding model is needed.
         self._collection = (
             self.client.get_or_create_collection(
-                name=collection_name
+                name=collection_name,
+                embedding_function=None,
             )
         )
 
@@ -54,6 +57,7 @@ class ChromaMemoryAuditStore(
                 or ""
             ),
             "confidence": record.confidence,
+            "reason": record.reason,
             "similarity": (
                 record.similarity
                 if record.similarity is not None
@@ -85,6 +89,7 @@ class ChromaMemoryAuditStore(
         self._collection.upsert(
             ids=[record.record_id],
             documents=[record.new_content],
+            embeddings=[[0.0]],
             metadatas=[metadata],
         )
 

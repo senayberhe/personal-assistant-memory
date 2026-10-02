@@ -30,4 +30,9 @@ class MemoryMetricsListener(
         self.metrics.record(
             action=event.action,
             success=event.success,
+            resolution=(
+                event.resolution.value
+                if event.resolution is not None
+                else None
+            ),
         )

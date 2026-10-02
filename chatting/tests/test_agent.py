@@ -68,6 +68,9 @@ from assistant.memory import MemoryManager
 from assistant.memory.embeddings import SimpleEmbeddingService
 from assistant.memory.extractor import MemoryExtractor
 from assistant.memory.retrieval.in_memory import InMemoryRetriever
+from assistant.memory.retrieval.scored_candidate_retriever import (
+    ScoredCandidateRetriever,
+)
 from assistant.memory.storage.in_memory import InMemoryStore
 
 
@@ -194,12 +197,15 @@ def test_voice_agent_saves_and_recalls_memories():
 
     store = InMemoryStore()
 
+    retriever = InMemoryRetriever(
+        memory_store=store,
+        embedding_service=SimpleEmbeddingService(),
+    )
+
     memory_manager = MemoryManager(
         store=store,
-        retriever=InMemoryRetriever(
-            memory_store=store,
-            embedding_service=SimpleEmbeddingService(),
-        ),
+        retriever=retriever,
+        candidate_retriever=ScoredCandidateRetriever(retriever),
     )
 
     agent, client = make_agent(

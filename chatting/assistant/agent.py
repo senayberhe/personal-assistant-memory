@@ -1,39 +1,59 @@
+"""
+The agent: one user message in, one reply out.
+
+For each message it saves anything worth remembering, recalls
+related memories, then runs the model's tool-calling loop until
+the model answers with text.
+"""
+
 import json
 import logging
+from collections.abc import Callable
 
 from openai import OpenAI, OpenAIError
 
-from assistant.errors import (
-    AgentError,
-    PermissionDeniedError,
-    ToolError,
-)
+from assistant.errors import AgentError, PermissionDeniedError, ToolError
 from assistant.memory import ConversationMemory
 from assistant.memory.context import format_memory_context
-from assistant.memory.deduplicator import MemoryDeduplicator
+from assistant.memory.guard import SensitiveMemoryError
 from assistant.observability import measure_time
+from assistant.safety import clean_text
 from config.settings import Settings
 
 logger = logging.getLogger(__name__)
 
+MAX_INPUT_CHARACTERS = 2_000
 
-INSTRUCTIONS = (
-    "You are a helpful voice assistant running on macOS. "
-    "Your replies are spoken aloud, so keep them short, "
-    "conversational, and free of markdown or lists. "
-    "Use the available tools when the user asks you to "
-    "open an application, open a website, or search. "
-    "If a tool fails, briefly tell the user what went wrong."
+_BASE_INSTRUCTIONS = (
+    "You are a helpful personal assistant running on macOS. "
+    "Use the available tools when the user asks you to open an "
+    "application, open a website, or search. If a tool fails, "
+    "briefly tell the user what went wrong. Never reveal or repeat "
+    "secrets such as passwords or API keys."
 )
+
+VOICE_INSTRUCTIONS = (
+    f"{_BASE_INSTRUCTIONS} Your replies are spoken aloud, so keep "
+    "them short, conversational, and free of markdown or lists."
+)
+
+TEXT_INSTRUCTIONS = (
+    f"{_BASE_INSTRUCTIONS} Your replies are shown in a terminal "
+    "chat. Keep them concise; simple Markdown is allowed."
+)
+
+# Backwards-compatible name.
+INSTRUCTIONS = VOICE_INSTRUCTIONS
+
+ToolCallListener = Callable[[str, dict], None]
 
 
 class VoiceAgent:
     """
     Runs the LLM tool-calling loop for a single user request.
 
-    The agent recalls relevant long-term memories, sends the
-    conversation to the model, executes any tool calls through
-    the ToolExecutor, and returns the final spoken reply.
+    Used by both the voice and the text interface; only the
+    `instructions` differ.
     """
 
     def __init__(
@@ -45,44 +65,52 @@ class VoiceAgent:
         memory_extractor=None,
         client=None,
         conversation: ConversationMemory | None = None,
+        instructions: str = VOICE_INSTRUCTIONS,
+        on_tool_call: ToolCallListener | None = None,
     ):
+        """
+        on_tool_call:
+            Optional callback(tool_name, arguments), called before
+            each tool runs. The text UI uses it to show activity.
+        """
+
         self.executor = executor
         self.tool_definitions = tool_definitions
         self.settings = settings
         self.memory_manager = memory_manager
         self.memory_extractor = memory_extractor
+        self.instructions = instructions
+        self.on_tool_call = on_tool_call
 
         self.client = client or OpenAI(
             api_key=settings.openai_api_key,
             timeout=settings.api_timeout,
         )
 
-        self.conversation = (
-            conversation or ConversationMemory()
-        )
-
-        self.deduplicator = (
-            MemoryDeduplicator(memory_manager)
-            if memory_manager is not None
-            else None
-        )
+        self.conversation = conversation or ConversationMemory()
 
     def run(
         self,
         text: str,
     ) -> str:
 
-        text = text.strip()
+        text = clean_text(text, MAX_INPUT_CHARACTERS + 1)
 
         if not text:
             return "I didn't catch that."
 
-        self._remember(text)
+        if len(text) > MAX_INPUT_CHARACTERS:
+            return (
+                "That message is too long. Please keep it under "
+                f"{MAX_INPUT_CHARACTERS} characters."
+            )
+
+        notices = self._remember(text)
 
         input_items: list = [
             {
                 "role": "developer",
-                "content": self._build_instructions(text),
+                "content": self._build_instructions(text, notices),
             },
             *self.conversation.get_messages(),
             {
@@ -91,13 +119,9 @@ class VoiceAgent:
             },
         ]
 
-        for step in range(
-            self.settings.max_agent_steps
-        ):
+        for step in range(self.settings.max_agent_steps):
 
-            response = self._create_response(
-                input_items
-            )
+            response = self._create_response(input_items)
 
             function_calls = [
                 item
@@ -106,11 +130,7 @@ class VoiceAgent:
             ]
 
             if not function_calls:
-
-                reply = (
-                    response.output_text.strip()
-                    or "Done."
-                )
+                reply = response.output_text.strip() or "Done."
 
                 self.conversation.add_user_message(text)
                 self.conversation.add_assistant_message(reply)
@@ -120,7 +140,6 @@ class VoiceAgent:
             input_items.extend(response.output)
 
             for call in function_calls:
-
                 input_items.append(
                     {
                         "type": "function_call_output",
@@ -136,9 +155,13 @@ class VoiceAgent:
             )
 
         raise AgentError(
-            f"Agent exceeded "
-            f"{self.settings.max_agent_steps} steps."
+            f"Agent exceeded {self.settings.max_agent_steps} steps."
         )
+
+    def reset_conversation(self) -> None:
+        """Forget the short-term conversation (not long-term memory)."""
+
+        self.conversation.clear()
 
     # --------------------------------------------------
     # Model
@@ -150,9 +173,7 @@ class VoiceAgent:
     ):
 
         try:
-
             with measure_time("llm_response"):
-
                 return self.client.responses.create(
                     model=self.settings.model,
                     input=input_items,
@@ -160,7 +181,6 @@ class VoiceAgent:
                 )
 
         except OpenAIError as error:
-
             raise AgentError(
                 "The language model request failed."
             ) from error
@@ -175,24 +195,21 @@ class VoiceAgent:
     ) -> str:
 
         try:
-            arguments = json.loads(
-                call.arguments or "{}"
-            )
+            arguments = json.loads(call.arguments or "{}")
 
         except json.JSONDecodeError:
-            return (
-                f"Error: invalid JSON arguments "
-                f"for '{call.name}'."
-            )
+            return f"Error: invalid JSON arguments for '{call.name}'."
+
+        if self.on_tool_call is not None:
+            try:
+                self.on_tool_call(call.name, arguments)
+
+            except Exception:
+                logger.exception("on_tool_call listener failed.")
 
         try:
-
             with measure_time(f"tool:{call.name}"):
-
-                return self.executor.execute(
-                    call.name,
-                    arguments,
-                )
+                return self.executor.execute(call.name, arguments)
 
         except PermissionDeniedError:
             # The user said no; stop the whole request.
@@ -210,59 +227,68 @@ class VoiceAgent:
     def _build_instructions(
         self,
         text: str,
+        notices: list[str],
     ) -> str:
 
-        if self.memory_manager is None:
-            return INSTRUCTIONS
+        sections = [self.instructions, *notices]
 
-        try:
-            memories = [
-                ranked.memory
-                for ranked in self.memory_manager.recall_ranked(
-                    text,
-                    top_k=5,
-                )
-            ]
+        if self.memory_manager is not None:
+            try:
+                memories = [
+                    ranked.memory
+                    for ranked in self.memory_manager.recall_ranked(
+                        text,
+                        top_k=5,
+                    )
+                ]
 
-        except Exception:
-            logger.exception(
-                "Memory recall failed."
-            )
-            return INSTRUCTIONS
+                sections.append(format_memory_context(memories))
 
-        return (
-            f"{INSTRUCTIONS}\n\n"
-            f"{format_memory_context(memories)}"
-        )
+            except Exception:
+                logger.exception("Memory recall failed.")
+
+        return "\n\n".join(sections)
 
     def _remember(
         self,
         text: str,
-    ) -> None:
+    ) -> list[str]:
+        """
+        Save facts from the message.
 
-        if (
-            self.memory_manager is None
-            or self.memory_extractor is None
-            or self.deduplicator is None
-        ):
-            return
+        Returns notices for the model, e.g. that sensitive data
+        was deliberately not saved.
+        """
 
-        try:
+        if self.memory_manager is None or self.memory_extractor is None:
+            return []
 
-            for item in self.memory_extractor.extract(text):
+        notices = []
 
-                if self.deduplicator.find_duplicate(
-                    item["content"]
-                ):
-                    continue
-
-                self.memory_manager.remember(
+        for item in self.memory_extractor.extract(text):
+            try:
+                # upsert runs the full pipeline: duplicates are
+                # ignored and conflicts go through the policy.
+                self.memory_manager.upsert(
                     content=item["content"],
                     memory_type=item["memory_type"],
                     source="conversation",
                 )
 
-        except Exception:
-            logger.exception(
-                "Saving memory failed."
-            )
+            except SensitiveMemoryError as error:
+                logger.warning(
+                    "Refused to store sensitive memory: %s",
+                    ", ".join(error.kinds),
+                )
+
+                notices.append(
+                    "Note: the user's last message contained sensitive "
+                    f"information ({', '.join(error.kinds)}). It was NOT "
+                    "saved to long-term memory. If they asked you to "
+                    "remember it, tell them you do not store secrets."
+                )
+
+            except Exception:
+                logger.exception("Saving memory failed.")
+
+        return notices

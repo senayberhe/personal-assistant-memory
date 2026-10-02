@@ -1,4 +1,7 @@
 import logging
+from collections.abc import Callable
+
+from assistant.errors import StartupError
 
 logger = logging.getLogger(__name__)
 
@@ -9,9 +12,19 @@ class Application:
         self,
         assistant,
         health_checker,
+        shutdown_hooks: list[Callable[[], None]] | None = None,
     ):
+        """
+        assistant:
+            The interface to run (voice loop or text chat);
+            anything with a run() method.
+        shutdown_hooks:
+            Cleanup callbacks run once on shutdown.
+        """
+
         self.assistant = assistant
         self.health_checker = health_checker
+        self.shutdown_hooks = list(shutdown_hooks or [])
         self.started = False
 
     @property
@@ -21,7 +34,7 @@ class Application:
     def startup(self) -> None:
 
         logger.info(
-            "Starting voice assistant."
+            "Starting assistant."
         )
 
         results = self.health_checker.run()
@@ -42,18 +55,22 @@ class Application:
                     result.message,
                 )
 
-        if not all(
-            result.healthy
+        failed = [
+            result
             for result in results
-        ):
-            raise RuntimeError(
-                "Startup health checks failed."
+            if not result.healthy
+        ]
+
+        if failed:
+            raise StartupError(
+                "Startup health checks failed: "
+                + "; ".join(result.message for result in failed)
             )
 
         self.started = True
 
         logger.info(
-            "Voice assistant started."
+            "Assistant started."
         )
 
     def run(self) -> None:
@@ -71,11 +88,18 @@ class Application:
             return
 
         logger.info(
-            "Shutting down voice assistant."
+            "Shutting down assistant."
         )
+
+        for hook in self.shutdown_hooks:
+            try:
+                hook()
+
+            except Exception:
+                logger.exception("Shutdown hook failed.")
 
         self.started = False
 
         logger.info(
-            "Voice assistant stopped."
+            "Assistant stopped."
         )
