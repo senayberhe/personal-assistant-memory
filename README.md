@@ -5,6 +5,18 @@ with** in the terminal. It uses OpenAI tool calling to open apps and
 websites and to search, and it **remembers facts about you** across
 conversations, with versioning, conflict handling, and an audit log.
 
+**Highlights**
+
+- **Conflict-aware memory:** an LLM decides whether each new fact is
+  new, a duplicate, an update or a contradiction, with a rule-based
+  fallback when the API is down. Every change is versioned and can
+  be rolled back.
+- **Safety by default:** secrets are redacted before anything reaches
+  OpenAI, nothing is saved without approval, and risky tools ask
+  first. End-to-end contract tests check all of this.
+- **Tested:** 340 tests that run in seconds with no network or API
+  calls; linted with Ruff and type-checked with mypy.
+
 ```
 ╭──────────────────────────────── Assistant ────────────────────────────────╮
 │ Chat with your assistant. It can open apps and websites, search, and      │
@@ -80,6 +92,9 @@ Saving a memory (`MemoryManager.upsert`) runs a small pipeline:
 5. **Store**: save; the old version goes to history.
 6. **Event**: logged, counted (`/stats`), and written to the audit log.
 
+The memory package has its own guide:
+[`chatting/assistant/memory/README.md`](chatting/assistant/memory/README.md).
+
 ## Safety
 
 Safety comes first, by design:
@@ -141,6 +156,12 @@ chatting/
 ├── data/memory/            memory database (git-ignored)
 └── logs/                   assistant.log (git-ignored)
 ```
+
+## Also in this repository
+
+[`stock_market/`](stock_market/README.md) holds a small separate tool
+that looks up live stock prices by ticker or company name, typed or
+spoken (`uv run python stock_market/live_price.py`).
 
 ## Development
 
