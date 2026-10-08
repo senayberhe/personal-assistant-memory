@@ -1,0 +1,36 @@
+# Runs the same checks as the README's Development section on
+# every push and pull request. No OpenAI key is needed: the tests
+# never call the network.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # PyAudio (microphone support) is built against PortAudio.
+      - name: Install PortAudio
+        run: sudo apt-get update && sudo apt-get install -y portaudio19-dev
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: uv run ruff check chatting stock_market
+
+      - name: Type-check (mypy)
+        run: uv run mypy
+
+      - name: Test (pytest)
+        run: uv run pytest

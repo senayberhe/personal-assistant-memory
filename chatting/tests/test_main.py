@@ -1,6 +1,6 @@
+import main
 import pytest
 
-import main
 from assistant.errors import StartupError
 from config.settings import PROJECT_ROOT, resolve_project_path
 

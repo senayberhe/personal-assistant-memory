@@ -1,5 +1,7 @@
 # Personal assistant with long-term memory
 
+[![CI](https://github.com/senayberhe/personal-assistant-memory/actions/workflows/ci.yml/badge.svg)](https://github.com/senayberhe/personal-assistant-memory/actions/workflows/ci.yml)
+
 A macOS assistant you can **talk to** (microphone + speech) or **chat
 with** in the terminal. It uses OpenAI tool calling to open apps and
 websites and to search, and it **remembers facts about you** across
@@ -167,12 +169,13 @@ spoken (`uv run python stock_market/live_price.py`).
 
 ```bash
 uv run pytest             # run the tests (no network or API calls)
-ruff check chatting       # lint
-mypy                      # type-check
+uv run ruff check chatting stock_market   # lint
+uv run mypy               # type-check
 ```
 
 All three are configured in `pyproject.toml` and run from the
-repository root.
+repository root. GitHub Actions runs them on every push
+(`.github/workflows/ci.yml`).
 
 ## Configuration
 

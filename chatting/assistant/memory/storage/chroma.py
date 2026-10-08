@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import datetime
 
 import chromadb
@@ -109,7 +110,7 @@ class ChromaMemoryStore(MemoryStore):
     def collection(self): return self._collection
 
     def save(self, memory: Memory) -> None:
-        embeddings = None
+        embeddings: list[Sequence[float]] | None = None
 
         if self.embedding_service is not None:
             embeddings = [

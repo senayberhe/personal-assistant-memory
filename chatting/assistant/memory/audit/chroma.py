@@ -1,4 +1,6 @@
+from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
 import chromadb
 
@@ -46,7 +48,7 @@ class ChromaMemoryAuditStore(
         record: MemoryAuditRecord,
     ) -> None:
 
-        metadata = {
+        metadata: dict[str, Any] = {
             "created_at": (
                 record.created_at.isoformat()
             ),
@@ -86,10 +88,14 @@ class ChromaMemoryAuditStore(
             ),
         }
 
+        # Audit records are never searched by similarity,
+        # so a placeholder vector is enough.
+        embeddings: list[Sequence[float]] = [[0.0]]
+
         self._collection.upsert(
             ids=[record.record_id],
             documents=[record.new_content],
-            embeddings=[[0.0]],
+            embeddings=embeddings,
             metadatas=[metadata],
         )
 

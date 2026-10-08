@@ -9,8 +9,10 @@ the model answers with text.
 import json
 import logging
 from collections.abc import Callable
+from typing import cast
 
 from openai import OpenAI, OpenAIError
+from openai.types.responses import ToolParam
 
 from assistant.errors import AgentError, PermissionDeniedError, ToolError
 from assistant.memory import ConversationMemory
@@ -195,7 +197,9 @@ class VoiceAgent:
                 return self.client.responses.create(
                     model=self.settings.model,
                     input=input_items,
-                    tools=self.tool_definitions,
+                    # The definitions are plain dicts in the
+                    # shape the API expects (tools/builtin.py).
+                    tools=cast(list[ToolParam], self.tool_definitions),
                 )
 
         except OpenAIError as error:

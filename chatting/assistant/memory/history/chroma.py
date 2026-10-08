@@ -1,4 +1,6 @@
+from collections.abc import Sequence
 from datetime import datetime
+from typing import Any
 
 import chromadb
 
@@ -65,7 +67,7 @@ class ChromaMemoryHistoryStore(
             f"{version.version}"
         )
 
-        metadata = {
+        metadata: dict[str, Any] = {
             "memory_id": version.memory_id,
             "version": version.version,
             "created_at": (
@@ -79,10 +81,14 @@ class ChromaMemoryHistoryStore(
             ),
         }
 
+        # History is looked up by memory_id, never by similarity,
+        # so a placeholder vector is enough.
+        embeddings: list[Sequence[float]] = [[0.0]]
+
         self._collection.upsert(
             ids=[history_id],
             documents=[version.content],
-            embeddings=[[0.0]],
+            embeddings=embeddings,
             metadatas=[metadata],
         )
 
@@ -105,27 +111,20 @@ class ChromaMemoryHistoryStore(
             }
         )
 
-        documents = results.get(
-            "documents",
-            [],
-        )
+        documents = results["documents"] or []
 
         ids = results.get(
             "ids",
             [],
         )
 
-        metadatas = results.get(
-            "metadatas",
-            [],
-        )
+        metadatas = results["metadatas"] or []
 
         versions = []
 
         for index, _history_id in enumerate(ids):
-            metadata = (
-                metadatas[index]
-                or {}
+            metadata: dict[str, Any] = dict(
+                metadatas[index] or {}
             )
 
             created_at = (
